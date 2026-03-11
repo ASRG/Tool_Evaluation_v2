@@ -32,7 +32,7 @@ jobs:
           password:         ${{ secrets.SITEGROUND_PASS }}
           protocol:         ftps              # SiteGround supports FTPS (FTP over TLS)
           port:             21
-          local-dir:        ./               # repo root — uploads everything below
+          local-dir:        ./plugin/        # only deploy plugin/ contents directly into the target dir
           server-dir:       ${{ secrets.SITEGROUND_WP_PLUGIN_PATH }}
           # Example server-dir value (set as secret or hardcode):
           #   /home/yourusername/public_html/wp-content/plugins/asrg-csms-evaluation/
@@ -40,8 +40,6 @@ jobs:
             **/.git*
             **/.git*/**
             **/node_modules/**
-            .github/**
-            docs/**
           dangerous-clean-slate: false       # never wipe the remote dir
 
       # ── 3. (Optional) Notify Slack on success ─────────────────────────────
