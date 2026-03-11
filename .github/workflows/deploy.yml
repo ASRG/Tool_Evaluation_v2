@@ -1,0 +1,56 @@
+name: Deploy to SiteGround
+
+on:
+  push:
+    branches:
+      - main          # fires whenever a PR is merged to main
+
+jobs:
+  deploy:
+    name: Deploy via SFTP
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout the repo ──────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Deploy the plugin folder via SFTP ─────────────────────────────
+      #    Uses: https://github.com/SamKirkland/FTP-Deploy-Action
+      #    SiteGround supports SFTP on port 22. Set your credentials as
+      #    GitHub repo secrets (Settings → Secrets and variables → Actions):
+      #
+      #      SITEGROUND_HOST     e.g. premium123.web-hosting.com
+      #      SITEGROUND_USER     e.g. yourusername
+      #      SITEGROUND_PASS     your SiteGround SFTP password
+      #
+      - name: Deploy plugin to SiteGround via SFTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server:           ${{ secrets.SITEGROUND_HOST }}
+          username:         ${{ secrets.SITEGROUND_USER }}
+          password:         ${{ secrets.SITEGROUND_PASS }}
+          protocol:         ftps              # SiteGround supports FTPS (FTP over TLS)
+          port:             21
+          local-dir:        ./               # repo root — uploads everything below
+          server-dir:       ${{ secrets.SITEGROUND_WP_PLUGIN_PATH }}
+          # Example server-dir value (set as secret or hardcode):
+          #   /home/yourusername/public_html/wp-content/plugins/asrg-csms-evaluation/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            .github/**
+            docs/**
+          dangerous-clean-slate: false       # never wipe the remote dir
+
+      # ── 3. (Optional) Notify Slack on success ─────────────────────────────
+      # Uncomment and add SLACK_WEBHOOK secret to enable
+      # - name: Notify Slack
+      #   if: success()
+      #   uses: slackapi/slack-github-action@v1.26.0
+      #   with:
+      #     payload: |
+      #       {"text": "✅ ASRG CSMS Evaluation deployed to SiteGround from branch `main` by ${{ github.actor }}"}
+      #   env:
+      #     SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}

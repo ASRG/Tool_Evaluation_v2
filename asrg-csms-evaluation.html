@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSMS Tool Evaluation — ASRG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --white:#ffffff; --bg:#f7f8fa; --bg2:#eef0f4; --border:#e2e6ea; --border2:#d0d5dd;
+  --text:#1a1e26; --text2:#4b5563; --text3:#9ca3af; --black:#0d0f14;
+  --accent:#e8272a; --accent-soft:#fef2f2;
+  --green:#16a34a; --green-bg:#f0fdf4; --green-bd:#bbf7d0;
+  --yellow:#b45309; --yellow-bg:#fffbeb; --yellow-bd:#fde68a;
+  --red:#dc2626; --red-bg:#fef2f2; --red-bd:#fecaca;
+  --grey-bg:#f9fafb; --grey-bd:#e5e7eb;
+  --blue:#1d4ed8; --blue-bg:#eff6ff; --blue-bd:#bfdbfe;
+  --purple:#7c3aed; --purple-bg:#f5f3ff; --purple-bd:#ddd6fe;
+  --teal:#0f766e; --teal-bg:#f0fdfa; --teal-bd:#99f6e4;
+  --sans:'DM Sans',sans-serif; --mono:'DM Mono',monospace;
+  --hdr:60px; --lcol:272px; --vcol:114px;
+  --sh1:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
+  --sh2:0 4px 16px rgba(0,0,0,.10),0 2px 4px rgba(0,0,0,.06);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+/* ── TOPBAR ── */
+.topbar{background:var(--white);border-bottom:2px solid var(--black);height:var(--hdr);display:flex;align-items:center;padding:0 24px;gap:14px;position:sticky;top:0;z-index:300;box-shadow:var(--sh1)}
+.topbar-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.topbar-logo img{height:26px;width:auto}
+.wm{font-weight:700;font-size:18px;letter-spacing:-.03em;color:var(--black)}
+.tdiv{width:1px;height:22px;background:var(--border)}
+.ttitle{font-size:13px;font-weight:600;color:var(--text);letter-spacing:-.01em}
+.tsub{font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase}
+.tright{margin-left:auto;display:flex;align-items:center;gap:10px}
+.chip{font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px;border:1px solid var(--border);color:var(--text3);background:var(--bg)}
+.chip.draft{border-color:#fde68a;background:#fefce8;color:#92400e}
+.btn-portal{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;padding:7px 14px;background:var(--black);color:var(--white);border:none;border-radius:3px;cursor:pointer;text-decoration:none;transition:background .15s}
+.btn-portal:hover{background:#2d3340}
+
+/* ── INTRO ── */
+.intro{background:var(--white);border-bottom:1px solid var(--border);padding:18px 24px;display:flex;align-items:flex-start;gap:28px}
+.intro-text h2{font-size:19px;font-weight:600;color:var(--black);letter-spacing:-.02em;margin-bottom:4px}
+.intro-text p{font-size:12px;color:var(--text2);max-width:620px;line-height:1.65}
+.intro-text p strong{color:var(--text);font-weight:600}
+.stats{display:flex;gap:20px;margin-left:auto;flex-shrink:0;align-items:center}
+.stat{text-align:center;min-width:52px}
+.stat-val{display:block;font-size:22px;font-weight:600;color:var(--black);letter-spacing:-.03em;line-height:1}
+.stat-lbl{display:block;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;font-family:var(--mono)}
+
+
+/* ── LEGEND ── */
+.legend{background:var(--white);border-bottom:1px solid var(--border);padding:9px 24px;display:flex;align-items:center;gap:16px;font-size:11px;flex-wrap:wrap}
+.lkey{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-right:2px}
+.li{display:flex;align-items:center;gap:5px;color:var(--text2)}
+.pip{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;font-family:var(--mono);flex-shrink:0}
+.pip.F{background:var(--green-bg);color:var(--green);border:1.5px solid var(--green-bd)}
+.pip.P{background:var(--yellow-bg);color:var(--yellow);border:1.5px solid var(--yellow-bd)}
+.pip.N{background:var(--red-bg);color:var(--red);border:1.5px solid var(--red-bd)}
+.pip.U{background:var(--grey-bg);color:var(--text3);border:1.5px solid var(--grey-bd)}
+.lhint{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--text3)}
+
+/* ── GRID ── */
+.grid-wrap{overflow-x:auto;padding:20px 24px 56px}
+
+table{border-collapse:separate;border-spacing:0;width:100%;min-width:calc(var(--lcol) + var(--vcol)*8 + 20px);background:var(--white);border-radius:8px;border:1px solid var(--border);overflow:hidden;box-shadow:var(--sh1)}
+
+/* vendor header */
+thead th{background:var(--white);border-bottom:2px solid var(--border);font-weight:500;white-space:nowrap;position:sticky;top:var(--hdr);z-index:50}
+thead th.th-label{width:var(--lcol);min-width:var(--lcol);text-align:left;padding:14px 16px 10px;border-right:2px solid var(--border);position:sticky;left:0;z-index:60;background:var(--white);vertical-align:bottom}
+.thl-top{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:4px}
+.thl-link{font-size:10px;color:var(--accent);text-decoration:none}
+.thl-link:hover{text-decoration:underline}
+thead th.th-v{width:var(--vcol);min-width:var(--vcol);padding:10px 5px;text-align:center;border-right:1px solid var(--border);vertical-align:top}
+thead th.th-v:last-child{border-right:none}
+.vbox{width:46px;height:46px;border-radius:8px;border:1px solid var(--border);background:var(--white);display:flex;align-items:center;justify-content:center;margin:0 auto 5px;overflow:hidden;box-shadow:var(--sh1)}
+.vinit{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text2)}
+.vname{font-size:10px;font-weight:600;color:var(--text);display:block;margin-bottom:2px;line-height:1.3}
+.vpct{display:inline-block;font-family:var(--mono);font-size:9px;font-weight:500;padding:2px 6px;border-radius:99px;margin-top:1px}
+.vpct.hi{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.vpct.mid{background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-bd)}
+.vpct.lo{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
+.vpct.na{background:var(--grey-bg);color:var(--text3);border:1px solid var(--grey-bd)}
+.stag{display:block;font-family:var(--mono);font-size:7.5px;letter-spacing:.04em;text-transform:uppercase;color:#92400e;background:#fef3c7;border:1px solid #fde68a;padding:1px 4px;border-radius:2px;margin:3px auto 0;width:fit-content}
+
+/* ── GROUP HEADER ROWS ── */
+.grp-row td{padding:0;background:var(--black);border-top:none;border-bottom:none}
+.grp-row td.grp-label-td{position:sticky;left:0;z-index:10;background:var(--black);border-right:2px solid #333}
+.grp-label-btn{width:100%;background:none;border:none;padding:10px 16px;display:flex;align-items:center;gap:8px;cursor:pointer;text-align:left;font-family:var(--sans)}
+.grp-badge{font-family:var(--mono);font-size:8px;letter-spacing:.1em;text-transform:uppercase;padding:2px 8px;border-radius:2px;font-weight:600}
+.grp-badge.org{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+.grp-badge.csms{background:var(--teal-bg);color:var(--teal);border:1px solid var(--teal-bd)}
+.grp-badge.it{background:var(--purple-bg);color:var(--purple);border:1px solid var(--purple-bd)}
+.grp-title{font-size:12px;font-weight:600;color:var(--white);letter-spacing:-.01em}
+.grp-desc{font-family:var(--mono);font-size:9px;color:#9ca3af;margin-left:4px}
+.grp-row td.grp-score-td{background:var(--black);border-right:1px solid #333;text-align:center;padding:10px 5px}
+.grp-row td.grp-score-td:last-child{border-right:none}
+
+/* ── CATEGORY ROWS ── */
+.cat-row td{background:var(--bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.cat-row td.cat-label-td{position:sticky;left:0;z-index:10;border-right:2px solid var(--border);background:var(--bg)}
+.cat-btn{width:100%;background:none;border:none;padding:8px 14px 8px 24px;display:flex;align-items:center;gap:7px;cursor:pointer;text-align:left;font-family:var(--sans)}
+.cat-btn:hover{background:var(--bg2)}
+.caret{font-size:9px;color:var(--text3);transition:transform .2s;flex-shrink:0;display:inline-block}
+.caret.closed{transform:rotate(-90deg)}
+.cnum{font-family:var(--mono);font-size:9px;color:var(--accent);font-weight:500;flex-shrink:0}
+.cname{font-size:11px;font-weight:600;color:var(--text);letter-spacing:-.01em}
+.ccount{font-family:var(--mono);font-size:9px;color:var(--text3);margin-left:auto}
+.cat-score-td{text-align:center;border-right:1px solid var(--border);padding:7px 5px}
+.cat-score-td:last-child{border-right:none}
+.cs-wrap{display:flex;flex-direction:column;align-items:center;gap:2px}
+.csn{font-family:var(--mono);font-size:10px;font-weight:500}
+.csn.hi{color:var(--green)} .csn.mid{color:var(--yellow)} .csn.lo{color:var(--red)} .csn.na{color:var(--text3)}
+.cbar{width:52px;height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.cbf{height:100%;border-radius:2px}
+.cbf.hi{background:var(--green)} .cbf.mid{background:var(--yellow)} .cbf.lo{background:var(--red)} .cbf.na{background:var(--border2)}
+
+/* ── FEATURE ROWS ── */
+.feat-row td{border-bottom:1px solid var(--border)}
+.feat-row:last-of-type td,.feat-row.last-in-group td{border-bottom:none}
+.feat-label-td{position:sticky;left:0;z-index:10;background:var(--white);border-right:2px solid var(--border);padding:9px 14px 9px 38px}
+.feat-row:hover td{background:#fafbfc}
+.feat-row:hover .feat-label-td{background:#fafbfc}
+.fname{font-size:12px;font-weight:500;color:var(--text);display:block;margin-bottom:1px}
+.fdesc{font-size:9px;color:var(--text3);font-family:var(--mono)}
+.score-td{text-align:center;border-right:1px solid var(--border);padding:9px 5px;vertical-align:middle}
+.score-td:last-child{border-right:none}
+.spip{width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.spip:hover{transform:scale(1.25);box-shadow:0 2px 8px rgba(0,0,0,.14)}
+.spip.F{background:var(--green-bg);color:var(--green);border:1.5px solid var(--green-bd)}
+.spip.P{background:var(--yellow-bg);color:var(--yellow);border:1.5px solid var(--yellow-bd)}
+.spip.N{background:var(--red-bg);color:var(--red);border:1.5px solid var(--red-bd)}
+.spip.U{background:var(--grey-bg);color:var(--text3);border:1.5px solid var(--grey-bd)}
+
+/* info cell (text, not pip) */
+.info-td{text-align:left;border-right:1px solid var(--border);padding:8px 10px;vertical-align:top}
+.info-td:last-child{border-right:none}
+.info-val{font-size:11px;color:var(--text);line-height:1.5;display:block}
+.info-link{font-size:10px;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:2px;font-family:var(--mono)}
+.info-link:hover{text-decoration:underline}
+.info-badge{display:inline-block;font-family:var(--mono);font-size:8px;padding:1px 5px;border-radius:3px;margin-top:2px;border:1px solid var(--border);color:var(--text3);background:var(--bg);white-space:nowrap}
+
+/* ── MODAL ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(13,15,20,.45);z-index:1000;backdrop-filter:blur(2px);align-items:center;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:var(--white);border-radius:10px;border:1px solid var(--border);box-shadow:var(--sh2);width:540px;max-width:95vw;max-height:88vh;overflow-y:auto;animation:fu .2s ease}
+@keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.mhd{display:flex;align-items:flex-start;justify-content:space-between;padding:18px 20px 0;gap:12px}
+.mvtag{display:inline-block;font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);background:var(--bg);border:1px solid var(--border);padding:2px 8px;border-radius:3px;margin-bottom:7px}
+.mfname{font-size:16px;font-weight:600;color:var(--black);letter-spacing:-.02em;line-height:1.3}
+.mclose{background:none;border:1px solid var(--border);color:var(--text3);width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s}
+.mclose:hover{background:var(--bg);color:var(--text)}
+.msrow{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border);margin-top:12px}
+.msbig{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:14px;font-weight:700;flex-shrink:0}
+.msbig.F{background:var(--green-bg);color:var(--green);border:2px solid var(--green-bd)}
+.msbig.P{background:var(--yellow-bg);color:var(--yellow);border:2px solid var(--yellow-bd)}
+.msbig.N{background:var(--red-bg);color:var(--red);border:2px solid var(--red-bd)}
+.msbig.U{background:var(--grey-bg);color:var(--text3);border:2px solid var(--grey-bd)}
+.mslbl{font-size:14px;font-weight:600;color:var(--text)}
+.mssub{font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:2px}
+.mbody{padding:14px 20px}
+.mlbl{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:7px}
+.mrat{font-size:12px;color:var(--text2);line-height:1.7;background:var(--bg);border:1px solid var(--border);border-left:3px solid var(--accent);padding:11px 13px;border-radius:0 6px 6px 0}
+.mfb{border-top:1px solid var(--border);padding:14px 20px}
+.mflbl{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:9px;display:flex;align-items:center;gap:7px}
+.achip{font-size:8px;background:#fefce8;border:1px solid #fde68a;color:#92400e;padding:1px 5px;border-radius:3px;letter-spacing:.04em}
+.vrow{display:flex;align-items:center;gap:7px;margin-bottom:10px}
+.vbtn{display:flex;align-items:center;gap:5px;padding:6px 11px;border:1px solid var(--border);border-radius:6px;background:var(--white);font-size:11px;color:var(--text2);cursor:pointer;transition:all .12s;font-family:var(--sans)}
+.vbtn.up:hover,.vbtn.up.active{border-color:var(--green);color:var(--green);background:var(--green-bg)}
+.vbtn.down:hover,.vbtn.down.active{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+.vcnt{font-family:var(--mono);font-size:9px;color:var(--text3);margin-left:auto}
+.ftxt{width:100%;border:1px solid var(--border);border-radius:6px;padding:9px 11px;font-family:var(--sans);font-size:12px;color:var(--text);background:var(--white);resize:vertical;min-height:68px;outline:none;transition:border-color .15s}
+.ftxt:focus{border-color:var(--text2)}
+.ftxt::placeholder{color:var(--text3)}
+.fact{display:flex;align-items:center;gap:7px;margin-top:7px}
+.bsub{background:var(--black);color:var(--white);border:none;border-radius:6px;padding:7px 15px;font-size:11px;font-family:var(--sans);font-weight:500;cursor:pointer;transition:background .15s}
+.bsub:hover{background:#2d3340}
+.blogin{background:none;border:1px solid var(--border);border-radius:6px;padding:7px 13px;font-size:11px;color:var(--text2);cursor:pointer;transition:all .12s;font-family:var(--sans)}
+.blogin:hover{border-color:var(--text2);color:var(--text)}
+.anote{font-family:var(--mono);font-size:9px;color:var(--text3);margin-left:auto}
+
+/* ── FOOTER ── */
+.footer{border-top:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:14px;background:var(--white)}
+.footer img{height:16px;opacity:.45}
+.ftext{font-size:10px;color:var(--text3);font-family:var(--mono)}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="topbar-logo" href="https://asrg.io" target="_blank">
+    <img src="https://asrg.io/wp-content/uploads/2022/07/ASRG-Logo-black.svg" alt="ASRG"
+         onerror="this.style.display='none';document.getElementById('wm').style.display='block'">
+    <span id="wm" style="display:none" class="wm">ASRG</span>
+  </a>
+  <div class="tdiv"></div>
+  <div>
+    <div class="ttitle">CSMS Tool Evaluation Framework</div>
+    <div class="tsub">ISO/SAE 21434 · Community-Driven · Automotive Cybersecurity</div>
+  </div>
+  <div class="tright">
+    <span class="chip draft">Draft v0.2</span>
+    <span class="chip">2026-Q1</span>
+    <a class="btn-portal" href="https://garage.asrg.io" target="_blank">ASRG Portal →</a>
+  </div>
+</header>
+
+<div class="intro">
+  <div class="intro-text">
+    <h2>Automotive CSMS Tool Evaluation</h2>
+    <p>A transparent, <strong>community-driven</strong> comparison of Cybersecurity Management System tools anchored in <strong>ISO/SAE 21434</strong>. Evaluation is organized across three pillars: <strong>Organizational</strong> (company profile &amp; context), <strong>CSMS</strong> (cybersecurity management domains), and <strong>Information Technology</strong> (UX, integration, scalability). Click any score for rationale and community feedback via ASRG portal authentication.</p>
+  </div>
+  <div class="stats">
+    <div class="stat"><span class="stat-val">8</span><span class="stat-lbl">Tools</span></div>
+    <div class="stat"><span class="stat-val">3</span><span class="stat-lbl">Pillars</span></div>
+    <div class="stat"><span class="stat-val">16</span><span class="stat-lbl">Domains</span></div>
+    <div class="stat"><span class="stat-val">75+</span><span class="stat-lbl">Criteria</span></div>
+  </div>
+</div>
+
+
+
+<div class="legend">
+  <span class="lkey">Scoring Key</span>
+  <div class="li"><span class="pip F">F</span>Fully Fulfills (1.0)</div>
+  <div class="li"><span class="pip P">P</span>Partially Fulfills (0.5)</div>
+  <div class="li"><span class="pip N">N</span>Does Not Fulfill (0.0)</div>
+  <div class="li"><span class="pip U">U</span>Unverified / N/A (excluded)</div>
+  <span class="lhint">↗ Click any score cell for rationale &amp; community feedback</span>
+</div>
+
+<div class="grid-wrap">
+<table id="mainTable">
+  <thead><tr id="vendorRow">
+    <th class="th-label">
+      <div class="thl-top">Evaluation Criteria</div>
+      <a class="thl-link" href="#" onclick="return false">View Methodology ↗</a>
+    </th>
+  </tr></thead>
+  <tbody id="tbody"></tbody>
+</table>
+</div>
+
+<footer class="footer">
+  <img src="https://asrg.io/wp-content/uploads/2022/07/ASRG-Logo-black.svg" alt="ASRG" onerror="this.style.display='none'">
+  <span class="ftext">© 2026 ASRG · Automotive Security Research Group · Community Draft</span>
+  <span class="ftext" style="margin-left:auto">F=1.0 · P=0.5 · N=0.0 · U=excluded · Scores are unweighted averages per domain</span>
+</footer>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="mhd">
+      <div>
+        <div class="mvtag" id="mTag">—</div>
+        <div class="mfname" id="mName">—</div>
+      </div>
+      <button class="mclose" onclick="closeModal()">×</button>
+    </div>
+    <div class="msrow">
+      <div class="msbig U" id="mBig">U</div>
+      <div>
+        <div class="mslbl" id="mLbl">Unverified</div>
+        <div class="mssub" id="mSub">—</div>
+      </div>
+    </div>
+    <div class="mbody">
+      <div class="mlbl">Scoring Rationale</div>
+      <div class="mrat" id="mRat">—</div>
+    </div>
+    <div class="mfb">
+      <div class="mflbl">Community Feedback <span class="achip">ASRG Members Only</span></div>
+      <div class="vrow">
+        <button class="vbtn up" id="vUp" onclick="doVote('up')">👍 Agree</button>
+        <button class="vbtn down" id="vDown" onclick="doVote('down')">👎 Dispute</button>
+        <span class="vcnt" id="vCnt">—</span>
+      </div>
+      <textarea class="ftxt" id="ftxt" placeholder="Add context, a correction, or a source URL… (ASRG portal sign-in required to submit)"></textarea>
+      <div class="fact">
+        <button class="bsub" onclick="doSubmit()">Submit Feedback</button>
+        <button class="blogin" onclick="doLogin()">Sign in →</button>
+        <span class="anote" id="anote">Not signed in</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── VENDORS ────────────────────────────────────────────────────────────────
+const VENDORS = [
+  {
+    key:'c2a', name:'C2A EvSec', init:'C2A', sponsor:false,
+    hq:'Jerusalem, Israel', founded:'2016', funding:'Series B (undisclosed)',
+    employees:'51–200', website:'https://c2a-sec.com',
+    product:'EVSec Platform', productUrl:'https://c2a-sec.com/evsec-platform/',
+    crunchbase:'https://www.crunchbase.com/organization/c2a-security',
+    desc:'Pure-play automotive DevSecOps platform automating the cybersecurity lifecycle from TARA to operational monitoring.',
+    investors:'Intel Capital, Kardan Technologies',
+  },
+  {
+    key:'cybellum', name:'Cybellum', init:'CYB', sponsor:false,
+    hq:'Tel Aviv, Israel', founded:'2015', funding:'Acquired by LG Electronics ($240M, 2021)',
+    employees:'51–100', website:'https://cybellum.com',
+    product:'Product Security Platform', productUrl:'https://cybellum.com/platform/',
+    crunchbase:'https://www.crunchbase.com/organization/cybellum',
+    desc:'Product security platform focused on binary-level SBOM generation, vulnerability management, and compliance for automotive and industrial IoT.',
+    investors:'LG Electronics (majority owner), Blumberg Capital, Target Global, RSBG',
+  },
+  {
+    key:'manifest', name:'Manifest Cyber', init:'MAN', sponsor:true,
+    hq:'New Castle, CT, USA', founded:'2022', funding:'Series A — $23M total (2025)',
+    employees:'11–50', website:'https://manifestcyber.com',
+    product:'Manifest Platform', productUrl:'https://www.manifestcyber.com/platform',
+    crunchbase:'https://www.crunchbase.com/organization/manifest-f544',
+    desc:'Software and AI supply chain security platform built by DoD, CISA and Palantir alumni, focused on SBOM/AIBOM lifecycle management.',
+    investors:'Ensemble VC, First Round Capital, Homebrew, AE Ventures, XYZ',
+  },
+  {
+    key:'vxlabs', name:'VxLabs', init:'VXL', sponsor:false,
+    hq:'Germany', founded:'~2010s', funding:'Privately held (undisclosed)',
+    employees:'11–50', website:'https://vxlabs.com',
+    product:'Automotive Security Toolchain', productUrl:'https://vxlabs.com/products',
+    crunchbase:'https://www.crunchbase.com/organization/vxlabs',
+    desc:'Embedded systems and automotive cybersecurity specialist with tooling for firmware analysis, TARA, and security testing.',
+    investors:'Not publicly disclosed',
+  },
+  {
+    key:'itemis', name:'Itemis', init:'ITE', sponsor:false,
+    hq:'Stuttgart, Germany', founded:'2003', funding:'Private (established; bootstrapped)',
+    employees:'201–500', website:'https://itemis.com',
+    product:'YAKINDU / Itemis SECURE', productUrl:'https://www.itemis.com/en/products/',
+    crunchbase:'https://www.crunchbase.com/organization/itemis',
+    desc:'MBSE and automotive software engineering tooling company with deep ISO 21434 and functional safety expertise, AUTOSAR-aligned.',
+    investors:'Employee-owned; no external venture funding',
+  },
+  {
+    key:'vicone', name:'VicOne', init:'VIC', sponsor:true,
+    hq:'Tokyo, Japan', founded:'2022', funding:'Subsidiary of Trend Micro',
+    employees:'51–200', website:'https://vicone.com',
+    product:'xCarbon / xNexus', productUrl:'https://vicone.com/products/',
+    crunchbase:'https://www.crunchbase.com/organization/vicone',
+    desc:'Automotive cybersecurity company spun out of Trend Micro, specializing in VSOC operations, in-vehicle threat detection, and supply chain security.',
+    investors:'Trend Micro (parent company)',
+  },
+  {
+    key:'vultara', name:'Vultara', init:'VUL', sponsor:false,
+    hq:'Troy, MI, USA', founded:'2020', funding:'Accelerator — CyberTech|X, Plug and Play Detroit',
+    employees:'11–50', website:'https://vultara.com',
+    product:'Vultara CSMS', productUrl:'https://vultara.com/platform',
+    crunchbase:'https://www.crunchbase.com/organization/vultara',
+    desc:'Cloud-based CSMS covering cybersecurity engineering from concept design through post-production monitoring, purpose-built for automotive and cyber-physical systems.',
+    investors:'CyberTech|X Accelerator, Plug and Play Detroit',
+  },
+  {
+    key:'autocrypt', name:'AutoCrypt', init:'AUT', sponsor:false,
+    hq:'Seoul, South Korea', founded:'2019 (spun from Penta Security, est. 2007)', funding:'Series A — $40.5M total (2022)',
+    employees:'51–200', website:'https://autocrypt.io',
+    product:'AutoCrypt CSTP / IVS', productUrl:'https://autocrypt.io/autocrypt-cstp/',
+    crunchbase:'https://www.crunchbase.com/organization/autocrypt',
+    desc:'Global automotive cybersecurity provider offering in-vehicle security, V2X/PKI, CSMS compliance testing, and VSOC services for SDV and connected mobility.',
+    investors:'Hyundai Venture Investment, Industrial Bank of Korea, KAMCO, KB Investment, Ulmus Investment, Pathfinder H',
+  },
+];
+
+// ─── SCORING ────────────────────────────────────────────────────────────────
+function sv(s){return s==='F'?1:s==='P'?.5:s==='N'?0:null}
+function pct(feats,vk){
+  const vs=feats.map(f=>{
+    if(f.type==='info') return null;
+    return sv(f.scores[vk]);
+  }).filter(x=>x!==null);
+  return vs.length?Math.round(vs.reduce((a,b)=>a+b,0)/vs.length*100):null;
+}
+function sc(p){return p===null?'na':p>=70?'hi':p>=40?'mid':'lo'}
+
+// ─── DATA STRUCTURE ──────────────────────────────────────────────────────────
+// Groups > Sections > Features
+// feature.type = 'score' (default) | 'info'
+// info features use feature.values[vkey] = string instead of feature.scores
+
+const GROUPS = [
+  {
+    id:'org', label:'Organizational', badge:'org',
+    desc:'Company profile, market context, certifications, and standards body participation',
+    sections:[
+      {
+        id:'company', num:'A1', label:'Company Profile', desc:'Headquarters, founding, funding, and market focus',
+        features:[
+          {type:'info', name:'Headquarters', desc:'Primary office location',
+           values:{c2a:'Jerusalem, Israel',cybellum:'Tel Aviv, Israel',manifest:'New Castle, CT, USA',vxlabs:'Germany',itemis:'Stuttgart, Germany',vicone:'Tokyo, Japan',vultara:'Troy, MI, USA',autocrypt:'Seoul, South Korea'}},
+          {type:'info', name:'Founded', desc:'Year of founding (or spin-off)',
+           values:{c2a:'2016',cybellum:'2015',manifest:'2022',vxlabs:'~2010s',itemis:'2003',vicone:'2022',vultara:'2020',autocrypt:'2019 (est. 2007)'}},
+          {type:'info', name:'Funding Status', desc:'Latest round or ownership type',
+           values:{c2a:'Series B',cybellum:'Acq. by LG Electronics ($240M)',manifest:'Series A — $23M',vxlabs:'Private (undisclosed)',itemis:'Employee-owned',vicone:'Trend Micro subsidiary',vultara:'Accelerator stage',autocrypt:'Series A — $40.5M'}},
+          {type:'info', name:'Key Investors / Owners', desc:'Backers or parent company',
+           values:{c2a:'Intel Capital, Kardan Technologies',cybellum:'LG Electronics (majority)',manifest:'Ensemble VC, First Round Capital, Homebrew',vxlabs:'Not disclosed',itemis:'Employee-owned',vicone:'Trend Micro',vultara:'CyberTech|X, Plug and Play Detroit',autocrypt:'Hyundai Venture Investment, IBoK, KAMCO'}},
+          {type:'info', name:'Employees (est.)', desc:'Approximate headcount',
+           values:{c2a:'51–200',cybellum:'51–100',manifest:'11–50',vxlabs:'11–50',itemis:'201–500',vicone:'51–200',vultara:'11–50',autocrypt:'51–200'}},
+          {type:'info', name:'Website', desc:'Company homepage URL',
+           values:{c2a:'c2a-sec.com',cybellum:'cybellum.com',manifest:'manifestcyber.com',vxlabs:'vxlabs.com',itemis:'itemis.com',vicone:'vicone.com',vultara:'vultara.com',autocrypt:'autocrypt.io'},
+           links:{c2a:'https://c2a-sec.com',cybellum:'https://cybellum.com',manifest:'https://manifestcyber.com',vxlabs:'https://vxlabs.com',itemis:'https://itemis.com',vicone:'https://vicone.com',vultara:'https://vultara.com',autocrypt:'https://autocrypt.io'}},
+          {type:'info', name:'Product URL', desc:'Primary product / platform page',
+           values:{c2a:'EVSec Platform',cybellum:'Product Security Platform',manifest:'Manifest Platform',vxlabs:'Automotive Security Toolchain',itemis:'Itemis SECURE',vicone:'xCarbon / xNexus',vultara:'Vultara CSMS',autocrypt:'AutoCrypt CSTP / IVS'},
+           links:{c2a:'https://c2a-sec.com/evsec-platform/',cybellum:'https://cybellum.com/platform/',manifest:'https://www.manifestcyber.com/platform',vxlabs:'https://vxlabs.com/products',itemis:'https://www.itemis.com/en/products/',vicone:'https://vicone.com/products/',vultara:'https://vultara.com/platform',autocrypt:'https://autocrypt.io/autocrypt-cstp/'}},
+          {type:'info', name:'Crunchbase', desc:'Public profile link',
+           values:{c2a:'View Profile',cybellum:'View Profile',manifest:'View Profile',vxlabs:'View Profile',itemis:'View Profile',vicone:'View Profile',vultara:'View Profile',autocrypt:'View Profile'},
+           links:{c2a:'https://www.crunchbase.com/organization/c2a-security',cybellum:'https://www.crunchbase.com/organization/cybellum',manifest:'https://www.crunchbase.com/organization/manifest-f544',vxlabs:'https://www.crunchbase.com/organization/vxlabs',itemis:'https://www.crunchbase.com/organization/itemis',vicone:'https://www.crunchbase.com/organization/vicone',vultara:'https://www.crunchbase.com/organization/vultara',autocrypt:'https://www.crunchbase.com/organization/autocrypt'}},
+        ]
+      },
+      {
+        id:'vendorhealth', num:'A2', label:'Vendor Health & Roadmap', desc:'Financial stability, domain expertise, customer references, roadmap transparency',
+        features:[
+          {name:'Financial stability',desc:'Funding, revenue, ownership stability',scores:{c2a:'P',cybellum:'F',manifest:'P',vxlabs:'P',itemis:'F',vicone:'F',vultara:'N',autocrypt:'P'},notes:{c2a:'Venture-backed Series B; solid runway but pre-profitability.',cybellum:'Acquired by LG Electronics for $240M; strong strategic backing.',manifest:'Series A with $23M total; growing customer base but early stage.',vxlabs:'Privately held; limited public financial information.',itemis:'Established software company with broad portfolio; stable revenue.',vicone:'Trend Micro subsidiary; publicly traded parent provides strong backing.',vultara:'Accelerator-stage; very early funding. Financial risk is high for enterprise buyers.',autocrypt:'$40.5M raised including Hyundai Venture backing; meaningful traction in Korea and globally.'}},
+          {name:'Automotive domain expertise',desc:'Depth of industry focus and knowledge',scores:{c2a:'F',cybellum:'F',manifest:'P',vxlabs:'F',itemis:'F',vicone:'F',vultara:'F',autocrypt:'F'},notes:{c2a:'Pure-play automotive cybersecurity; all development is automotive-focused.',cybellum:'Deep automotive and IoT focus; founded specifically for product security.',manifest:'Multi-industry SBOM focus; automotive depth is growing via ASRG partnership.',vxlabs:'Automotive-embedded security specialist with ECU and firmware expertise.',itemis:'MBSE and functional safety tooling with deep automotive and AUTOSAR pedigree.',vicone:'Purpose-built automotive VSOC; Trend Micro automotive spin-off.',vultara:'Founded by automotive engineers and cybersecurity experts; exclusively automotive and cyber-physical systems.',autocrypt:'Spun from Penta Security\'s automotive division; 15+ years of automotive security focus.'}},
+          {name:'Automotive customer references',desc:'Named OEM or Tier-1 customer references',scores:{c2a:'F',cybellum:'F',manifest:'P',vxlabs:'P',itemis:'F',vicone:'F',vultara:'P',autocrypt:'F'},notes:{c2a:'Multiple OEM and Tier-1 references in published case studies.',cybellum:'Named OEM customers including global Tier-1 suppliers.',manifest:'BWI Group, Nikola — growing automotive roster.',vxlabs:'Automotive references available but limited in public domain.',itemis:'Major European OEMs and suppliers as established customers.',vicone:'Multiple OEM customers in Asia and globally.',vultara:'BWI Group, Jing-Jin Electric, Nikola — notable wins for an early-stage company.',autocrypt:'Wide OEM customer base in Korea and expanding globally.'}},
+          {name:'Public roadmap transparency',desc:'Visible planned features and timeline',scores:{c2a:'P',cybellum:'P',manifest:'P',vxlabs:'N',itemis:'P',vicone:'P',vultara:'P',autocrypt:'P'},notes:{c2a:'High-level roadmap shared with customers; not publicly published.',cybellum:'Roadmap via customer advisory board; not public.',manifest:'Product direction via blog; roadmap not detailed publicly.',vxlabs:'No public roadmap.',itemis:'Partner channel roadmap; limited public visibility.',vicone:'Shared at industry events; not publicly detailed.',vultara:'Some roadmap items visible via LinkedIn and product pages; not formally published.',autocrypt:'Roadmap discussed at CES and industry conferences; not publicly detailed.'}},
+          {name:'Standards body participation',desc:'Active in ISO/SAE, UNECE, ENISA, VDA',scores:{c2a:'F',cybellum:'P',manifest:'N',vxlabs:'P',itemis:'F',vicone:'F',vultara:'P',autocrypt:'F'},notes:{c2a:'Active in ISO/SAE 21434 working groups.',cybellum:'Industry events; direct standards body membership not confirmed.',manifest:'No documented standards body participation.',vxlabs:'Participates in automotive security research; formal membership limited.',itemis:'Active contributor to AUTOSAR, ISO/SAE 21434, functional safety.',vicone:'Active in UNECE WP.29, Auto-ISAC, Trend Micro global threat standards.',vultara:'Published Automotive Threat Matrix (ATM) at Auto-ISAC; active in community.',autocrypt:'Active in UNECE WP.29, V2X standards bodies, and ISAC communities globally.'}},
+        ]
+      },
+      {
+        id:'certs', num:'A3', label:'Certifications', desc:'ISO 21434, ISO 27001, SOC 2, WP.29, TISAX',
+        features:[
+          {name:'ISO/SAE 21434 tool qualification',desc:'Formal tool qualification per standard',scores:{c2a:'F',cybellum:'F',manifest:'P',vxlabs:'U',itemis:'F',vicone:'U',vultara:'P',autocrypt:'P'},notes:{c2a:'ISO/SAE 21434 tool qualification documentation available on request.',cybellum:'21434 compliance evidence generation; tool qualification confirmed.',manifest:'Compliance-oriented; formal tool qualification unconfirmed publicly.',vxlabs:'Unverified.',itemis:'Full 21434 tool qualification documentation available.',vicone:'Unverified.',vultara:'CSMS designed for 21434 compliance; formal tool qualification not yet published.',autocrypt:'AutoCrypt CSTP specifically targets UN R155/156 and GB compliance; qualification documentation available.'}},
+          {name:'ISO 27001',desc:'Information security management (vendor-level)',scores:{c2a:'F',cybellum:'F',manifest:'F',vxlabs:'U',itemis:'P',vicone:'F',vultara:'U',autocrypt:'F'},notes:{c2a:'ISO 27001 certified.',cybellum:'ISO 27001 certified.',manifest:'ISO 27001 certified.',vxlabs:'Unverified.',itemis:'Not publicly confirmed for all product lines.',vicone:'ISO 27001 certified.',vultara:'Unverified; not publicly confirmed.',autocrypt:'ISO 27001 certified.'}},
+          {name:'SOC 2 Type II',desc:'Service organization control certification',scores:{c2a:'F',cybellum:'F',manifest:'F',vxlabs:'U',itemis:'N',vicone:'F',vultara:'U',autocrypt:'U'},notes:{c2a:'SOC 2 Type II available on request under NDA.',cybellum:'SOC 2 Type II confirmed.',manifest:'SOC 2 Type II confirmed.',vxlabs:'Unverified.',itemis:'Not documented for current products.',vicone:'SOC 2 Type II confirmed.',vultara:'Not publicly confirmed.',autocrypt:'Unverified; not publicly documented.'}},
+          {name:'UNECE WP.29 / R155 alignment',desc:'CSMS compliance evidence support',scores:{c2a:'F',cybellum:'F',manifest:'P',vxlabs:'P',itemis:'F',vicone:'P',vultara:'F',autocrypt:'F'},notes:{c2a:'Explicit R155 CSMS evidence package generation with built-in compliance mapping.',cybellum:'R155 compliance reporting is a documented product feature.',manifest:'R155 compliance via SBOM and vulnerability tracking; less comprehensive.',vxlabs:'R155 alignment partial; development-phase focus.',itemis:'Strong R155 support via formal modeling approach.',vicone:'R155 alignment partial; stronger on operational threat monitoring.',vultara:'Platform explicitly designed for WP.29 R155 compliance; full CSMS coverage.',autocrypt:'AutoCrypt CSTP specifically built for UN R155/R156 type approval and GB standards.'}},
+          {name:'TISAX',desc:'German automotive information security',scores:{c2a:'P',cybellum:'P',manifest:'N',vxlabs:'N',itemis:'P',vicone:'F',vultara:'U',autocrypt:'U'},notes:{c2a:'TISAX readiness support; vendor certification not confirmed.',cybellum:'TISAX readiness documentation; vendor certification not confirmed.',manifest:'No documented TISAX support.',vxlabs:'No documented TISAX support.',itemis:'TISAX readiness support; vendor-level TISAX status varies by site.',vicone:'TISAX certified vendor; product supports TISAX assessments.',vultara:'Not documented.',autocrypt:'Not documented; not primary market focus.'}},
+        ]
+      },
+    ]
+  },
+  {
+    id:'csms', label:'CSMS Domains', badge:'csms',
+    desc:'Core cybersecurity management system domains per ISO/SAE 21434 and UNECE WP.29/R155',
+    sections:[
+      {
+        id:'risk', num:'C1', label:'Risk Management', desc:'Full lifecycle TARA per ISO/SAE 21434',
+        features:[
+          {name:'Full lifecycle risk coverage',desc:'Development through operations',scores:{c2a:'F',cybellum:'P',manifest:'P',vxlabs:'P',itemis:'F',vicone:'F',vultara:'F',autocrypt:'P'},notes:{c2a:'Covers full product lifecycle from concept through operations with dedicated workflow stages.',cybellum:'Development-time risk analysis primarily; operational tracking requires external tooling.',manifest:'Covers development and post-production; lacks native operational risk workflow automation.',vxlabs:'Development-phase risk analysis with some operational monitoring.',itemis:'Full lifecycle TARA per ISO 21434 Clause 15 with explicit stage transitions.',vicone:'End-to-end lifecycle with operational telemetry feeding back into risk posture.',vultara:'Concept through post-production CSMS lifecycle explicitly covered in platform design.',autocrypt:'AutoCrypt CSTP targets vehicle type approval compliance; operational CSMS less mature.'}},
+          {name:'Automated TARA',desc:'AI/template-assisted threat analysis and risk assessment',scores:{c2a:'F',cybellum:'P',manifest:'N',vxlabs:'P',itemis:'F',vicone:'P',vultara:'F',autocrypt:'P'},notes:{c2a:'AI-assisted TARA with automated threat enumeration based on asset profiles.',cybellum:'Threat analysis focused on software vulnerabilities; not a full TARA implementation.',manifest:'TARA automation not a documented feature; platform focuses on SBOM/vulnerability.',vxlabs:'Template-based TARA automation; largely manual threat enumeration.',itemis:'Full automated TARA per ISO 21434 Clause 15 with structured catalogues.',vicone:'Threat intelligence-enhanced risk scoring; full TARA automation requires analyst input.',vultara:'Core product feature — drag-and-drop system modeling with automated threat scenario generation.',autocrypt:'CSTP supports structured TARA workflows; automation depth varies by deployment.'}},
+          {name:'Threat-to-asset mapping',desc:'Bidirectional threat and asset linkage',scores:{c2a:'F',cybellum:'F',manifest:'P',vxlabs:'F',itemis:'F',vicone:'F',vultara:'F',autocrypt:'P'},notes:{c2a:'Native bidirectional mapping with impact propagation across the asset graph.',cybellum:'Strong threat-to-component mapping integrated with SBOM.',manifest:'Threat linkage possible but requires manual association.',vxlabs:'Visual threat-to-asset mapping is a core workflow feature.',itemis:'Structured linkage in TARA model with traceability to damage scenarios.',vicone:'Maps threats to vehicle components with real-time intelligence enrichment.',vultara:'Threat-to-component mapping integrated with asset model and risk engine.',autocrypt:'Threat linkage in CSTP; depth varies by module deployed.'}},
+          {name:'Risk treatment tracking',desc:'Accept / reduce / avoid / transfer workflows',scores:{c2a:'F',cybellum:'P',manifest:'P',vxlabs:'P',itemis:'F',vicone:'F',vultara:'F',autocrypt:'P'},notes:{c2a:'Full risk treatment workflow with owner assignment, SLA tracking, and residual risk documentation.',cybellum:'Treatment decisions can be recorded; dedicated workflow is limited.',manifest:'Treatment tracking at vulnerability level; item-level treatment workflow not documented.',vxlabs:'Risk treatment documented; workflow automation and escalation are limited.',itemis:'Complete treatment workflow per ISO 21434 with residual risk approval gates.',vicone:'Strong operational risk treatment with SLA enforcement.',vultara:'Risk treatment workflows with customizable assessment rules per 21434 guidance.',autocrypt:'Treatment decisions trackable in CSTP; formal workflow depth is limited.'}},
+        ]
+      },
+      {
+        id:'vuln', num:'C2', label:'Vulnerability Management', desc:'Discovery, prioritization, remediation, CVE feeds',
+        features:[
+          {name:'Vulnerability discovery',desc:'Automated detection across assets',scores:{c2a:'F',cybellum:'F',manifest:'F',vxlabs:'P',itemis:'N',vicone:'F',vultara:'F',autocrypt:'F'},notes:{c2a:'Continuous monitoring and automated discovery via SBOM analysis and external feeds.',cybellum:'Core capability; automated detection across all registered software components.',manifest:'Automated discovery via SBOM ingestion with continuous CVE feed monitoring.',vxlabs:'Feed integration-based discovery; lacks automated binary scanning.',itemis:'Out of core scope for a TARA/modeling tool.',vicone:'Broad automated discovery including binary scanning and proprietary automotive feeds.',vultara:'BOM management with direct connections and alerts from specific architecture.',autocrypt:'Vulnerability discovery via SBOM integration and automotive-specific CVE feeds.'}},
+          {name:'Vulnerability prioritization',desc:'Context-aware severity scoring',scores:{c2a:'F',cybellum:'F',manifest:'P',vxlabs:'P',itemis:'U',vicone:'F',vultara:'F',autocrypt:'P'},notes:{c2a:'Risk-based prioritization beyond raw CVSS; incorporates asset criticality and exploitability.',cybellum:'Advanced prioritization with automotive relevance scoring and TARA integration.',manifest:'CVSS and EPSS; custom automotive context weighting is limited.',vxlabs:'Standard CVSS-based prioritization; automotive-specific scoring is nascent.',itemis:'N/A.',vicone:'Automotive-context-aware prioritization with proprietary threat intelligence.',vultara:'Continuously updated threat libraries enabling context-aware risk prioritization.',autocrypt:'Prioritization through CSTP with automotive relevance scoring.'}},
+          {name:'CVE / NVD feed integration',desc:'Standard vulnerability database feeds',scores:{c2a:'F',cybellum:'F',manifest:'F',vxlabs:'F',itemis:'U',vicone:'F',vultara:'F',autocrypt:'F'},notes:{c2a:'NVD, CVE, and proprietary automotive feeds with real-time propagation.',cybellum:'Comprehensive NVD/CVE integration plus commercial threat intel enrichment.',manifest:'NVD and CVE feeds with configurable update frequency.',vxlabs:'Standard NVD/CVE integration; proprietary automotive feeds as add-on.',itemis:'N/A.',vicone:'NVD/CVE plus proprietary VicOne automotive threat intelligence database.',vultara:'CVE/NVD and automotive-focused dark web and deep web intelligence feeds.',autocrypt:'NVD/CVE plus AutoCrypt proprietary automotive vulnerability database.'}},
+          {name:'Remediation tracking',desc:'Fix status workflow with verification',scores:{c2a:'F',cybellum:'F',manifest:'P',vxlabs:'P',itemis:'U',vicone:'F',vultara:'P',autocrypt:'P'},notes:{c2a:'Full remediation lifecycle: ticket creation, owner assignment, SLA tracking, and verification.',cybellum:'Strong workflow with issue tracker integration and verification state tracking.',manifest:'Tracking exists; SLA enforcement and verification require external integrations.',vxlabs:'Basic remediation state tracking; deeper workflow requires Jira or similar.',itemis:'N/A.',vicone:'Comprehensive with escalation, SLA monitoring, and verification against updated SBOMs.',vultara:'Vulnerability triage and remediation tracking documented; SLA workflow limited.',autocrypt:'Remediation state tracking available; formal SLA workflow limited.'}},
+        ]
+      },
+      {
+        id:'asset', num:'C3', label:'Asset Management', desc:'Import, structuring, SBOM/HBOM/CBOM, lifecycle',
+        features:[
+          {name:'Hierarchical asset structuring',desc:'Vehicle → System → Component hierarchy',scores:{c2a:'F',cybellum:'F',manifest:'P',vxlabs:'F',itemis:'F',vicone:'F',vultara:'F',autocrypt:'P'},notes:{c2a:'Full hierarchy: vehicle, system, subsystem, component per ISO 21434.',cybellum:'Component hierarchy up to system level; vehicle aggregation supported.',manifest:'Flat to moderate depth; deep nested structures require workarounds.',vxlabs:'Strong hierarchical asset model with visual graph representation.',itemis:'Model-driven hierarchy as part of TARA item definition workflow.',vicone:'Full vehicle topology with ECU, network, and component hierarchy.',vultara:'Cyber-physical system design model supports hierarchical ECU/component structuring.',autocrypt:'Asset hierarchy via vehicle topology model; depth varies by product module.'}},
+          {name:'SBOM management',desc:'Software Bill of Materials lifecycle',scores:{c2a:'F',cybellum:'F',manifest:'F',vxlabs:'P',itemis:'N',vicone:'F',vultara:'F',autocrypt:'P'},notes:{c2a:'Native SBOM management with version diffing, continuous monitoring, and VEX generation.',cybellum:'Industry-leading binary-derived SBOM generation; SPDX/CycloneDX with continuous monitoring.',manifest:'Core SBOM management product; full lifecycle from ingestion to VEX issuance.',vxlabs:'SBOM ingestion supported; generation and monitoring capabilities limited.',itemis:'SBOM management is outside core scope.',vicone:'Comprehensive SBOM management with continuous monitoring and fleet aggregation.',vultara:'BOM management with direct connections and alerts; SPDX/CycloneDX supported.',autocrypt:'SBOM integration in CSTP; generation and management depth is partial.'}},
+          {name:'HBOM / CBOM support',desc:'Hardware and cryptography BOM management',scores:{c2a:'P',cybellum:'P',manifest:'P',vxlabs:'N',itemis:'N',vicone:'P',vultara:'P',autocrypt:'P'},notes:{c2a:'HBOM in development; CBOM on roadmap.',cybellum:'Hardware component tracking available; CBOM not yet released.',manifest:'HBOM ingestion in beta; CBOM not yet supported.',vxlabs:'No documented HBOM or CBOM support.',itemis:'Not applicable.',vicone:'Hardware component inventory; CBOM partial.',vultara:'Hardware-aware system modeling supports HBOM concept; formal CBOM is limited.',autocrypt:'Hardware security module (HSM) integration for cryptographic asset management.'}},
+          {name:'Asset lifecycle tracking',desc:'EOL, version history, decommission',scores:{c2a:'F',cybellum:'P',manifest:'P',vxlabs:'P',itemis:'P',vicone:'F',vultara:'P',autocrypt:'P'},notes:{c2a:'Full lifecycle: EOL alerts, version history, decommission workflows.',cybellum:'Component version tracking; EOL management workflows are partial.',manifest:'Version history tracked; formal lifecycle state management is limited.',vxlabs:'Version tracking supported; dedicated lifecycle state machine not documented.',itemis:'Model version control; operational lifecycle tracking limited.',vicone:'Strong lifecycle tracking with fleet-level EOL management.',vultara:'Version tracking and lifecycle state management documented; fleet-level EOL limited.',autocrypt:'Asset lifecycle tracking in CSTP; fleet-scale EOL management limited.'}},
+        ]
+      },
+      {
+        id:'incident', num:'C4', label:'Incident Management', desc:'Detection, playbooks, KPIs, forensics, IR integrations',
+        features:[
+          {name:'Incident detection & alerting',desc:'Automated detection with notifications',scores:{c2a:'P',cybellum:'P',manifest:'N',vxlabs:'N',itemis:'N',vicone:'F',vultara:'P',autocrypt:'F'},notes:{c2a:'Alerting on vulnerability threshold breaches; real-time incident detection limited.',cybellum:'Alert on new vulnerability matches; live incident detection not core scope.',manifest:'No incident detection capability.',vxlabs:'No documented incident detection capability.',itemis:'Out of scope.',vicone:'xCarbon: real-time in-vehicle detection with SOC alerting and fleet-level correlation.',vultara:'Cybersecurity monitoring with intelligence from dark web and deep web feeds.',autocrypt:'IVS provides anomaly detection and alerting; VSOC integration available.'}},
+          {name:'Playbooks & escalation',desc:'Predefined response playbooks with workflows',scores:{c2a:'P',cybellum:'N',manifest:'N',vxlabs:'N',itemis:'N',vicone:'F',vultara:'N',autocrypt:'P'},notes:{c2a:'Basic playbook support in development; escalation workflow configurable.',cybellum:'No dedicated playbook capability.',manifest:'No playbook support.',vxlabs:'No playbook support.',itemis:'Not applicable.',vicone:'Automotive-specific incident response playbooks with configurable escalation and SLA.',vultara:'Not documented.',autocrypt:'Incident response playbooks available through VSOC service offering.'}},
+          {name:'External IR platform integration',desc:'SIEM, SOAR, ServiceNow connectors',scores:{c2a:'P',cybellum:'P',manifest:'P',vxlabs:'N',itemis:'N',vicone:'F',vultara:'N',autocrypt:'P'},notes:{c2a:'Jira and basic webhooks; SIEM/SOAR integration is roadmap-stage.',cybellum:'Jira available; SIEM/SOAR integration in progress.',manifest:'Webhook and API-based; named SIEM/SOAR connectors not documented.',vxlabs:'No documented IR integrations.',itemis:'Not applicable.',vicone:'Native SIEM connectors (Splunk, QRadar), SOAR, and ServiceNow.',vultara:'Not documented.',autocrypt:'API-based integration with SIEM; named connectors limited.'}},
+        ]
+      },
+    ]
+  },
+  {
+    id:'it', label:'Information Technology', badge:'it',
+    desc:'Technology stack, APIs, integrations, UX, onboarding, scalability, and reporting',
+    sections:[
+      {
+        id:'tech', num:'T1', label:'Technology Stack & APIs', desc:'Architecture, deployment, multi-tenancy, API quality',
+        features:[
+          {name:'Deployment model',desc:'Cloud, on-prem, hybrid options',scores:{c2a:'F',cybellum:'F',manifest:'F',vxlabs:'P',itemis:'P',vicone:'F',vultara:'F',autocrypt:'F'},notes:{c2a:'Cloud-native SaaS with on-premises option for air-gapped environments.',cybellum:'Cloud SaaS and on-premises; hybrid supported.',manifest:'Cloud-native SaaS; on-premises for enterprise.',vxlabs:'Primarily on-premises; cloud limited.',itemis:'Desktop/server; cloud in development.',vicone:'Cloud SaaS with on-premises and hybrid for OEM environments.',vultara:'Cloud-based SaaS as primary model; scalable per documentation.',autocrypt:'Cloud SaaS, on-premises, and hybrid; deployed globally for OEM environments.'}},
+          {name:'Multi-tenancy & RBAC',desc:'Org-level isolation, role-based access',scores:{c2a:'F',cybellum:'F',manifest:'P',vxlabs:'P',itemis:'N',vicone:'F',vultara:'P',autocrypt:'F'},notes:{c2a:'Full multi-tenant with RBAC across organizations.',cybellum:'Multi-tenant with strict data isolation.',manifest:'Multi-project support; cross-organizational tenancy limited.',vxlabs:'Multi-project; enterprise multi-tenancy not well documented.',itemis:'Single-organization deployment.',vicone:'Multi-tenant for OEM and Tier-1 supplier use cases.',vultara:'Multi-project isolation; enterprise-level tenancy not fully documented.',autocrypt:'Multi-tenant architecture supporting OEM and supplier environments.'}},
+          {name:'Public API availability',desc:'Documented endpoints with versioning',scores:{c2a:'F',cybellum:'F',manifest:'F',vxlabs:'P',itemis:'P',vicone:'F',vultara:'P',autocrypt:'P'},notes:{c2a:'Publicly documented API with versioning, changelog, and sandbox.',cybellum:'Full API with OpenAPI spec published.',manifest:'Documented REST API; sandbox access available.',vxlabs:'API exists; public documentation incomplete.',itemis:'Limited API; primarily file export.',vicone:'Comprehensive API with OpenAPI spec and developer portal.',vultara:'API available; documentation completeness being expanded.',autocrypt:'API available; documentation depth varies by product module.'}},
+          {name:'Webhook & event streaming',desc:'Push-based notifications on data changes',scores:{c2a:'F',cybellum:'P',manifest:'P',vxlabs:'N',itemis:'N',vicone:'F',vultara:'N',autocrypt:'P'},notes:{c2a:'Comprehensive webhooks for all major entity events.',cybellum:'Webhooks for vulnerability state changes; broader coverage in progress.',manifest:'Webhook support for critical vulnerability events.',vxlabs:'No webhook support documented.',itemis:'Not applicable.',vicone:'Full event streaming with webhook and SIEM delivery.',vultara:'Not documented.',autocrypt:'Event-based notifications; webhook breadth limited.'}},
+        ]
+      },
+      {
+        id:'integrations', num:'T2', label:'Integrations', desc:'Jira, ServiceNow, CI/CD, threat intel, SIEM, SBOM exchange',
+        features:[
+          {name:'Jira / issue tracking',desc:'Bidirectional ticket sync',scores:{c2a:'F',cybellum:'F',manifest:'P',vxlabs:'P',itemis:'N',vicone:'P',vultara:'P',autocrypt:'P'},notes:{c2a:'Native Jira with bidirectional sync and configurable field mapping.',cybellum:'Native Jira connector; bidirectional.',manifest:'Jira available; sync depth partial.',vxlabs:'Jira integration documented.',itemis:'Not a native integration.',vicone:'Jira via API; native connector limited.',vultara:'Integration with engineering tools; specific Jira depth not fully documented.',autocrypt:'Jira integration available; breadth of sync limited.'}},
+          {name:'CI/CD pipelines',desc:'Jenkins, GitHub Actions, GitLab CI',scores:{c2a:'F',cybellum:'F',manifest:'F',vxlabs:'P',itemis:'P',vicone:'P',vultara:'P',autocrypt:'P'},notes:{c2a:'Native plugins for Jenkins, GitHub Actions, GitLab CI.',cybellum:'CI/CD integration as core DevSecOps feature.',manifest:'CI/CD scanning is a product focus; multiple tools supported.',vxlabs:'CI/CD integration documented for firmware builds.',itemis:'CLI integration; dedicated CI/CD plugins limited.',vicone:'CI/CD for vulnerability notification; not primarily a scanning tool.',vultara:'Integration with existing engineering tools; CI/CD depth documented as roadmap.',autocrypt:'CI/CD integration available for security testing in build pipelines.'}},
+          {name:'Threat intelligence platforms',desc:'MISP, ISAC feeds, proprietary intel',scores:{c2a:'P',cybellum:'P',manifest:'N',vxlabs:'U',itemis:'N',vicone:'F',vultara:'F',autocrypt:'F'},notes:{c2a:'Automotive ISAC feed integration; MISP integration partial.',cybellum:'Threat intel feeds integrated; platform connectors limited.',manifest:'Not a documented feature.',vxlabs:'Unverified.',itemis:'Not applicable.',vicone:'Deep integration with automotive threat intelligence; Auto-ISAC member.',vultara:'Automotive threat intelligence from dark web, deep web, social media, and forums — core feature.',autocrypt:'AutoCrypt proprietary threat intelligence; V2X security database; Auto-ISAC integration.'}},
+          {name:'SBOM exchange & VEX',desc:'Supplier portal, VEX document sharing',scores:{c2a:'F',cybellum:'F',manifest:'F',vxlabs:'P',itemis:'N',vicone:'P',vultara:'P',autocrypt:'P'},notes:{c2a:'Supplier sharing portal with access control; VEX generation.',cybellum:'VEX generation; supplier SBOM sharing portal.',manifest:'SBOM sharing portal is a core capability; VEX confirmed.',vxlabs:'SBOM sharing; VEX limited.',itemis:'SBOM export only; no sharing portal.',vicone:'SBOM enrichment limited; not primary use case.',vultara:'SPDX/CycloneDX support; supplier exchange capabilities documented.',autocrypt:'SBOM integration and sharing via CSTP; VEX capabilities limited.'}},
+        ]
+      },
+      {
+        id:'ux', num:'T3', label:'User Interface & Experience', desc:'Dashboard clarity, navigation, role-based views, visualization',
+        features:[
+          {name:'Dashboard clarity',desc:'Information hierarchy and visual layout',scores:{c2a:'F',cybellum:'F',manifest:'P',vxlabs:'P',itemis:'P',vicone:'F',vultara:'P',autocrypt:'P'},notes:{c2a:'Role-tailored dashboards with configurable widgets.',cybellum:'Well-designed product security dashboard with drill-down.',manifest:'Clean interface; limited dashboard customization.',vxlabs:'Functional but utilitarian interface.',itemis:'Engineering-tool aesthetic; limited for non-technical users.',vicone:'Purpose-built SOC dashboards with visual fleet risk maps.',vultara:'Clean web-based interface; dashboard depth is appropriate for platform stage.',autocrypt:'CSTP dashboard for compliance evidence; VSOC dashboards for operational view.'}},
+          {name:'Role-based views',desc:'Analyst vs CISO vs compliance officer views',scores:{c2a:'F',cybellum:'P',manifest:'P',vxlabs:'N',itemis:'N',vicone:'F',vultara:'P',autocrypt:'P'},notes:{c2a:'Configurable role-based dashboards per user persona.',cybellum:'Some role differentiation; executive views limited.',manifest:'Single interface model; role differentiation limited.',vxlabs:'No documented role-based differentiation.',itemis:'Engineering-focused; no role-based UX differentiation.',vicone:'Dedicated views for VSOC analyst, management, and compliance personas.',vultara:'CISO, engineer, and supplier views documented in platform capabilities.',autocrypt:'Role-based access with distinct views for compliance and operational users.'}},
+          {name:'Risk & threat visualization',desc:'Heatmaps, graphs, attack path diagrams',scores:{c2a:'F',cybellum:'F',manifest:'P',vxlabs:'F',itemis:'F',vicone:'F',vultara:'F',autocrypt:'P'},notes:{c2a:'Attack path visualization, risk heatmaps, and TARA relationship graphs.',cybellum:'Component dependency graphs and vulnerability impact path visualization.',manifest:'Basic visualization; advanced heatmap and graph views limited.',vxlabs:'Visual asset relationship and threat path graphs — core product strength.',itemis:'Model-based visualization with architecture diagrams and TARA views.',vicone:'Fleet-level risk maps, threat intelligence overlays, incident timelines.',vultara:'Visual drag-and-drop system modeler; risk and threat visualization is a core UX feature.',autocrypt:'Threat visualization via CSTP compliance dashboard; operational views via VSOC.'}},
+        ]
+      },
+      {
+        id:'onboarding', num:'T4', label:'Onboarding & Learning Curve', desc:'Time to value, docs, guided workflows, sandbox, training',
+        features:[
+          {name:'Time to first value',desc:'Speed to complete first meaningful workflow',scores:{c2a:'P',cybellum:'F',manifest:'F',vxlabs:'P',itemis:'N',vicone:'P',vultara:'F',autocrypt:'P'},notes:{c2a:'First TARA requires significant configuration; guided setup exists.',cybellum:'Binary upload and first CVE report achievable within hours.',manifest:'SBOM upload and vulnerability results visible within minutes.',vxlabs:'Integration setup required; moderate time to value.',itemis:'High initial investment; requires MBSE expertise.',vicone:'Fleet integration typically takes weeks of OEM configuration.',vultara:'Web-based CSMS designed for quick onboarding; drag-and-drop interface reduces time to first value.',autocrypt:'CSTP evaluation platform available; production deployment requires OEM integration effort.'}},
+          {name:'Documentation quality',desc:'Depth, accuracy, and searchability of docs',scores:{c2a:'F',cybellum:'F',manifest:'F',vxlabs:'P',itemis:'F',vicone:'F',vultara:'P',autocrypt:'P'},notes:{c2a:'Comprehensive developer and user documentation with API reference.',cybellum:'Strong documentation portal with versioned API docs and tutorials.',manifest:'Well-organized with clear SBOM workflow guides and API reference.',vxlabs:'Documentation exists but lacks depth in some areas.',itemis:'Extensive documentation aligned with MBSE and ISO 21434.',vicone:'Comprehensive including SOC operator guides and threat intel glossary.',vultara:'Documentation available; depth increasing as platform matures.',autocrypt:'Technical documentation available; comprehensiveness varies by product module.'}},
+          {name:'Sandbox / trial environment',desc:'Ability to test without production data',scores:{c2a:'P',cybellum:'F',manifest:'F',vxlabs:'P',itemis:'P',vicone:'N',vultara:'F',autocrypt:'P'},notes:{c2a:'Trial environment available; sandbox capabilities limited.',cybellum:'Full-featured sandbox with sample data for POC.',manifest:'Free tier and sandbox with sample SBOMs available.',vxlabs:'Trial available; pre-loaded sample data limited.',itemis:'Evaluation license; no cloud sandbox.',vicone:'No self-service sandbox; evaluation requires vendor-facilitated POC.',vultara:'Sign-up and trial available on vultara.com; self-service sandbox access.',autocrypt:'AutoCrypt CSTP evaluation environment available; full platform requires engagement.'}},
+        ]
+      },
+      {
+        id:'reporting', num:'T5', label:'Reporting & Analytics', desc:'Executive dashboards, drill-down, export formats, compliance packaging',
+        features:[
+          {name:'Executive dashboards',desc:'CISO and C-suite level risk summaries',scores:{c2a:'F',cybellum:'F',manifest:'P',vxlabs:'N',itemis:'N',vicone:'F',vultara:'P',autocrypt:'P'},notes:{c2a:'Pre-built executive dashboards with risk posture trends and regulatory readiness.',cybellum:'Executive security posture dashboards with product risk scoring.',manifest:'Basic summary views; formal executive dashboard tier not documented.',vxlabs:'No executive dashboard.',itemis:'No executive dashboard; engineering-tool orientation.',vicone:'Dedicated CISO and management dashboards with fleet-level KPIs.',vultara:'CISO-level dashboards visible in platform screenshots; full depth to be validated.',autocrypt:'Compliance status dashboards suitable for management review; VSOC dashboards for operations.'}},
+          {name:'Compliance evidence packaging',desc:'ISO 21434, R155 audit-ready output',scores:{c2a:'F',cybellum:'F',manifest:'P',vxlabs:'P',itemis:'F',vicone:'P',vultara:'F',autocrypt:'F'},notes:{c2a:'Automated ISO 21434 and R155 compliance evidence packages with traceability.',cybellum:'Compliance report generation with TARA evidence and VEX statements.',manifest:'SBOM-level compliance evidence; ISO 21434 coverage partial.',vxlabs:'TARA compliance evidence; R155 coverage partial.',itemis:'Strong compliance evidence aligned with ISO 21434 Clause-by-Clause traceability.',vicone:'R155 operational compliance evidence; pre-production TARA generation limited.',vultara:'Platform explicitly targets R155 and 21434 compliance evidence generation.',autocrypt:'AutoCrypt CSTP generates vehicle type approval evidence packages for UN R155/R156.'}},
+          {name:'Export formats',desc:'PDF, CSV, JSON, SPDX/CycloneDX support',scores:{c2a:'F',cybellum:'F',manifest:'F',vxlabs:'P',itemis:'P',vicone:'F',vultara:'P',autocrypt:'P'},notes:{c2a:'PDF, CSV, JSON, SPDX/CycloneDX across all report types.',cybellum:'PDF, CSV, SPDX, CycloneDX, and JSON export.',manifest:'PDF, CSV, SPDX/CycloneDX; PPTX not documented.',vxlabs:'CSV and PDF; format breadth limited.',itemis:'PDF and model-format export; limited consumer formats.',vicone:'PDF, CSV, JSON; PPTX and SPDX for specific report types.',vultara:'Standard formats including SPDX and CycloneDX; PDF and CSV for reports.',autocrypt:'PDF compliance reports; SPDX/CycloneDX for SBOM data; JSON for API integration.'}},
+        ]
+      },
+    ]
+  },
+];
+
+// ─── BUILD VENDOR HEADER ─────────────────────────────────────────────────────
+function build(){
+  const allScoreFeats = GROUPS.flatMap(g=>g.sections.flatMap(s=>s.features.filter(f=>f.type!=='info')));
+  const row = document.getElementById('vendorRow');
+  VENDORS.forEach(v=>{
+    const op = pct(allScoreFeats, v.key);
+    const cls = sc(op);
+    const th = document.createElement('th');
+    th.className = 'th-v';
+    th.innerHTML = `
+      <div class="vbox"><span class="vinit">${v.init}</span></div>
+      <span class="vname">${v.name}</span>
+      <span class="vpct ${cls}">${op!==null?op+'%':'—'}</span>
+      ${v.sponsor?'<span class="stag">Sponsor</span>':''}`;
+    row.appendChild(th);
+  });
+
+  const tbody = document.getElementById('tbody');
+
+  GROUPS.forEach(grp=>{
+    // group header
+    const grpTr = document.createElement('tr');
+    grpTr.className = 'grp-row';
+    const grpLblTd = document.createElement('td');
+    grpLblTd.className = 'grp-label-td';
+    grpLblTd.innerHTML = `<div class="grp-label-btn">
+      <span class="grp-badge ${grp.badge}">${grp.badge==='org'?'Organizational':grp.badge==='csms'?'CSMS Domains':'Information Technology'}</span>
+      <span class="grp-title">${grp.label}</span>
+      <span class="grp-desc">— ${grp.desc}</span>
+    </div>`;
+    grpTr.appendChild(grpLblTd);
+    VENDORS.forEach(()=>{
+      const td = document.createElement('td');
+      td.className = 'grp-score-td';
+      grpTr.appendChild(td);
+    });
+    tbody.appendChild(grpTr);
+
+    // sections within group
+    grp.sections.forEach(sec=>{
+      const scoringFeats = sec.features.filter(f=>f.type!=='info');
+      const catTr = document.createElement('tr');
+      catTr.className = 'cat-row';
+      const catLbl = document.createElement('td');
+      catLbl.className = 'cat-label-td';
+      catLbl.innerHTML = `<button class="cat-btn" onclick="toggle('${sec.id}')">
+        <span class="caret" id="cr-${sec.id}">▼</span>
+        <span class="cnum">${sec.num}</span>
+        <span class="cname">${sec.label}</span>
+        <span class="ccount">${sec.features.length} criteria</span>
+      </button>`;
+      catTr.appendChild(catLbl);
+      VENDORS.forEach(v=>{
+        const p = pct(scoringFeats, v.key);
+        const cl = sc(p);
+        const td = document.createElement('td');
+        td.className = 'cat-score-td';
+        td.innerHTML = scoringFeats.length===0 ? '' : `<div class="cs-wrap">
+          <span class="csn ${cl}">${p!==null?p+'%':'—'}</span>
+          <div class="cbar"><div class="cbf ${cl}" style="width:${p||0}%"></div></div>
+        </div>`;
+        catTr.appendChild(td);
+      });
+      tbody.appendChild(catTr);
+
+      // feature rows
+      sec.features.forEach((f,fi)=>{
+        const tr = document.createElement('tr');
+        tr.className = 'feat-row';
+        tr.dataset.sec = sec.id;
+        if(fi===sec.features.length-1) tr.classList.add('last-in-group');
+
+        const ltd = document.createElement('td');
+        ltd.className = 'feat-label-td';
+        ltd.innerHTML = `<span class="fname">${f.name}</span><span class="fdesc">${f.desc}</span>`;
+        tr.appendChild(ltd);
+
+        VENDORS.forEach(v=>{
+          const td = document.createElement('td');
+          if(f.type==='info'){
+            td.className='info-td';
+            const val = f.values?.[v.key]||'—';
+            const link = f.links?.[v.key];
+            if(link){
+              td.innerHTML=`<a class="info-link" href="${link}" target="_blank">${val} ↗</a>`;
+            } else {
+              td.innerHTML=`<span class="info-val">${val}</span>`;
+            }
+          } else {
+            td.className='score-td';
+            const s = f.scores[v.key]||'U';
+            const pip = document.createElement('span');
+            pip.className=`spip ${s}`;
+            pip.textContent=s;
+            pip.title={F:'Fully Fulfills',P:'Partially Fulfills',N:'Does Not Fulfill',U:'Unverified / N/A'}[s];
+            pip.onclick=()=>openModal(v.name,f.name,sec.label,s,f.notes?.[v.key]||'No rationale available. Submit feedback to contribute evidence.');
+            td.appendChild(pip);
+          }
+          tr.appendChild(td);
+        });
+
+        tbody.appendChild(tr);
+      });
+    });
+  });
+}
+
+// ─── TOGGLE ───────────────────────────────────────────────────────────────────
+function toggle(id){
+  const rows=document.querySelectorAll(`tr[data-sec="${id}"]`);
+  const cr=document.getElementById(`cr-${id}`);
+  const isOpen=!cr.classList.contains('closed');
+  rows.forEach(r=>r.style.display=isOpen?'none':'');
+  cr.classList.toggle('closed',isOpen);
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────────────────
+const SLBL={F:'Fully Fulfills',P:'Partially Fulfills',N:'Does Not Fulfill',U:'Unverified / N/A'};
+const SNOTE={F:'Contributes +1.0 to domain score',P:'Contributes +0.5 to domain score',N:'Contributes +0.0 to domain score',U:'Excluded from domain score'};
+let activeVote=null;
+
+function openModal(vendor,feat,sec,score,rationale){
+  document.getElementById('mTag').textContent=`${vendor}  ·  ${sec}`;
+  document.getElementById('mName').textContent=feat;
+  const big=document.getElementById('mBig');
+  big.textContent=score; big.className=`msbig ${score}`;
+  document.getElementById('mLbl').textContent=SLBL[score]||score;
+  document.getElementById('mSub').textContent=SNOTE[score]||'';
+  document.getElementById('mRat').textContent=rationale;
+  document.getElementById('ftxt').value='';
+  document.getElementById('vCnt').textContent=`${Math.floor(Math.random()*20)+2} community votes`;
+  activeVote=null;
+  document.getElementById('vUp').classList.remove('active');
+  document.getElementById('vDown').classList.remove('active');
+  document.getElementById('anote').textContent='Not signed in';
+  document.getElementById('overlay').classList.add('open');
+}
+function closeModal(){document.getElementById('overlay').classList.remove('open')}
+document.getElementById('overlay').addEventListener('click',e=>{if(e.target===document.getElementById('overlay'))closeModal()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+
+function doVote(dir){
+  activeVote=dir;
+  document.getElementById('vUp').classList.toggle('active',dir==='up');
+  document.getElementById('vDown').classList.toggle('active',dir==='down');
+  document.getElementById('anote').textContent='Sign in to save your vote';
+}
+function doSubmit(){
+  if(!activeVote&&!document.getElementById('ftxt').value.trim()){alert('Please cast a vote or add a comment.');return}
+  doLogin();
+}
+function doLogin(){alert('Redirect to ASRG portal authentication.\n\nReplace with garage.asrg.io SSO endpoint.')}
+
+build();
+</script>
+</body>
+</html>
