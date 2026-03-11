@@ -68,7 +68,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13
 table{border-collapse:separate;border-spacing:0;width:100%;min-width:calc(var(--lcol) + var(--vcol)*8 + 20px);background:var(--white);border-radius:8px;border:1px solid var(--border);overflow:hidden;box-shadow:var(--sh1)}
 
 /* vendor header */
-thead th{background:var(--white);border-bottom:2px solid var(--border);font-weight:500;white-space:nowrap;position:sticky;top:var(--hdr);z-index:50}
+thead th{background:var(--white);border-bottom:2px solid var(--border);font-weight:500;white-space:nowrap;position:sticky;top:0;z-index:50}
 thead th.th-label{width:var(--lcol);min-width:var(--lcol);text-align:left;padding:14px 16px 10px;border-right:2px solid var(--border);position:sticky;left:0;z-index:60;background:var(--white);vertical-align:bottom}
 .thl-top{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:4px}
 .thl-link{font-size:10px;color:var(--accent);text-decoration:none}
@@ -193,23 +193,6 @@ thead th.th-v:last-child{border-right:none}
 </head>
 <body>
 
-<header class="topbar">
-  <a class="topbar-logo" href="https://asrg.io" target="_blank">
-    <img src="https://asrg.io/wp-content/uploads/2022/07/ASRG-Logo-black.svg" alt="ASRG"
-         onerror="this.style.display='none';document.getElementById('wm').style.display='block'">
-    <span id="wm" style="display:none" class="wm">ASRG</span>
-  </a>
-  <div class="tdiv"></div>
-  <div>
-    <div class="ttitle">CSMS Tool Evaluation Framework</div>
-    <div class="tsub">ISO/SAE 21434 · Community-Driven · Automotive Cybersecurity</div>
-  </div>
-  <div class="tright">
-    <span class="chip draft">Draft v0.2</span>
-    <span class="chip">2026-Q1</span>
-    <a class="btn-portal" href="https://garage.asrg.io" target="_blank">ASRG Portal →</a>
-  </div>
-</header>
 
 <div class="intro">
   <div class="intro-text">
@@ -232,7 +215,7 @@ thead th.th-v:last-child{border-right:none}
   <div class="li"><span class="pip P">P</span>Partially Fulfills (0.5)</div>
   <div class="li"><span class="pip N">N</span>Does Not Fulfill (0.0)</div>
   <div class="li"><span class="pip U">U</span>Unverified / N/A (excluded)</div>
-  <span class="lhint">↗ Click any score cell for rationale &amp; community feedback</span>
+  <span class="lhint"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle;margin-right:3px"><path d="M2 8L8 2M8 2H3.5M8 2V6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Click any score cell for rationale &amp; community feedback</span>
 </div>
 
 <div class="grid-wrap">
