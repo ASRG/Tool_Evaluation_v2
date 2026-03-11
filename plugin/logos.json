@@ -1,0 +1,11 @@
+{
+  "_comment": "Map vendor keys to logo image URLs. Leave a value as null (or remove the key) to fall back to the auto-fetched Clearbit logo. Set a URL to use your own hosted image instead.",
+  "c2a":       null,
+  "cybellum":  null,
+  "manifest":  null,
+  "vxlabs":    null,
+  "itemis":    null,
+  "vicone":    null,
+  "vultara":   null,
+  "autocrypt": null
+}

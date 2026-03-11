@@ -53,7 +53,23 @@ function asrg_csms_evaluation_shortcode( $atts ) {
 		$fonts = implode( "\n", $font_matches[0] ) . "\n";
 	}
 
-	return $fonts . $styles . $body;
+	// Inject logos.json as a JS variable so the evaluation table can use custom logos.
+	// Edit plugin/logos.json to map vendor keys to image URLs.
+	$logos_js = '<script>window.ASRG_LOGOS = {};</script>' . "\n";
+	$logos_file = plugin_dir_path( __FILE__ ) . 'logos.json';
+	if ( file_exists( $logos_file ) ) {
+		$logos_raw  = file_get_contents( $logos_file );
+		$logos_data = json_decode( $logos_raw, true );
+		if ( is_array( $logos_data ) ) {
+			// Strip internal comment key before passing to JS
+			unset( $logos_data['_comment'] );
+			// Remove null values so the UI falls back to Clearbit for those vendors
+			$logos_data = array_filter( $logos_data, function ( $v ) { return ! is_null( $v ); } );
+			$logos_js   = '<script>window.ASRG_LOGOS = ' . wp_json_encode( $logos_data ) . ';</script>' . "\n";
+		}
+	}
+
+	return $fonts . $styles . $logos_js . $body;
 }
 add_shortcode( 'asrg_csms_evaluation', 'asrg_csms_evaluation_shortcode' );
 

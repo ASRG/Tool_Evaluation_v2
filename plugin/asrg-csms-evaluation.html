@@ -509,8 +509,16 @@ function build(){
     const cls = sc(op);
     const th = document.createElement('th');
     th.className = 'th-v';
+    // resolve logo: custom override → Clearbit auto-fetch → initials fallback
+    const customLogo = (window.ASRG_LOGOS && window.ASRG_LOGOS[v.key]) || null;
+    const domain = (()=>{try{return new URL(v.website).hostname.replace(/^www\./,'');}catch(e){return null;}})();
+    const logoUrl = customLogo || (domain ? `https://logo.clearbit.com/${domain}` : null);
+    const imgHtml = logoUrl
+      ? `<img src="${logoUrl}" alt="${v.name}" style="width:32px;height:32px;object-fit:contain" onerror="this.style.display='none';this.parentNode.querySelector('.vinit').style.display=''">`
+      : '';
+    const initStyle = logoUrl ? 'display:none' : '';
     th.innerHTML = `
-      <div class="vbox"><span class="vinit">${v.init}</span></div>
+      <div class="vbox">${imgHtml}<span class="vinit" style="${initStyle}">${v.init}</span></div>
       <span class="vname">${v.name}</span>
       <span class="vpct ${cls}">${op!==null?op+'%':'—'}</span>
       ${v.sponsor?'<span class="stag">Sponsor</span>':''}`;
