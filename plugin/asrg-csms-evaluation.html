@@ -101,8 +101,8 @@ thead th.th-v:last-child{border-right:none}
 /* ── CATEGORY ROWS ── */
 .cat-row td{background:var(--bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
 .cat-row td.cat-label-td{position:sticky;left:0;z-index:10;border-right:2px solid var(--border);background:var(--bg)}
-.cat-btn{width:100%;background:none;border:none;padding:8px 14px 8px 24px;display:flex;align-items:center;gap:7px;cursor:pointer;text-align:left;font-family:var(--sans)}
-.cat-btn:hover{background:var(--bg2)}
+.cat-btn{width:100%;background:var(--bg) !important;border:none;padding:8px 14px 8px 24px;display:flex;align-items:center;gap:7px;cursor:pointer;text-align:left;font-family:var(--sans);color:var(--text) !important;-webkit-appearance:none;appearance:none}
+.cat-btn:hover{background:var(--bg2) !important}
 .caret{font-size:9px;color:var(--text3);transition:transform .2s;flex-shrink:0;display:inline-block}
 .caret.closed{transform:rotate(-90deg)}
 .cnum{font-family:var(--mono);font-size:9px;color:var(--accent);font-weight:500;flex-shrink:0}
