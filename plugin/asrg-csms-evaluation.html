@@ -223,7 +223,7 @@ thead th.th-v:last-child{border-right:none}
   <thead><tr id="vendorRow">
     <th class="th-label">
       <div class="thl-top">Evaluation Criteria</div>
-      <a class="thl-link" href="#" onclick="return false">View Methodology ↗</a>
+      <a class="thl-link" href="#" onclick="return false">View Methodology <svg width="9" height="9" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle"><path d="M2 8L8 2M8 2H3.5M8 2V6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
     </th>
   </tr></thead>
   <tbody id="tbody"></tbody>
@@ -593,7 +593,7 @@ function build(){
             const val = f.values?.[v.key]||'—';
             const link = f.links?.[v.key];
             if(link){
-              td.innerHTML=`<a class="info-link" href="${link}" target="_blank">${val} ↗</a>`;
+              td.innerHTML=`<a class="info-link" href="${link}" target="_blank">${val} <svg width="9" height="9" viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:inline-block;vertical-align:middle"><path d="M2 8L8 2M8 2H3.5M8 2V6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>`;
             } else {
               td.innerHTML=`<span class="info-val">${val}</span>`;
             }
