@@ -53,7 +53,7 @@ asrg-csms-evaluation/
 
 ## GitHub Actions CI/CD → SiteGround
 
-Every merge to `main` automatically deploys the latest files to SiteGround via FTPS.
+Every merge to `main` automatically deploys the latest files to SiteGround via FTPS. 
 
 ### One-time setup
 
