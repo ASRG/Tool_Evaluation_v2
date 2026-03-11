@@ -22,7 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 function asrg_csms_evaluation_shortcode( $atts ) {
 	$atts = shortcode_atts( [], $atts, 'asrg_csms_evaluation' );
 
-	$html_file = plugin_dir_path( __FILE__ ) . '../asrg-csms-evaluation.html';
+	$html_file = plugin_dir_path( __FILE__ ) . 'asrg-csms-evaluation.html';
 
 	if ( ! file_exists( $html_file ) ) {
 		return '<p style="color:red;">ASRG CSMS Evaluation: <code>asrg-csms-evaluation.html</code> not found in plugin directory.</p>';
