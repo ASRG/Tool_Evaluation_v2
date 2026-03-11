@@ -63,7 +63,7 @@ git init
 git remote add origin https://github.com/YOUR_ORG/asrg-csms-evaluation.git
 git add .
 git commit -m "Initial commit"
-git push -u origin main
+git push -u origin main 
 ```
 
 #### 2. Add GitHub Secrets
