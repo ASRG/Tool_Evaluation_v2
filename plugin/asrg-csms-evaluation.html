@@ -181,6 +181,15 @@ thead th.th-v:last-child{border-right:none}
 .blogin:hover{border-color:var(--text2);color:var(--text)}
 .anote{font-family:var(--mono);font-size:9px;color:var(--text3);margin-left:auto}
 
+/* ── VOTE TALLIES (in score cells) ── */
+.vtally{display:flex;align-items:center;justify-content:center;gap:3px;margin-top:3px;font-family:var(--mono);font-size:7px;min-height:10px}
+.vt-up{color:var(--green);font-weight:600}
+.vt-dn{color:var(--red);font-weight:600}
+
+/* ── VENDOR CLAIM SECTION (in modal) ── */
+.mclaim{border-top:1px solid var(--border);padding:14px 20px}
+.mclaim-approved{margin-bottom:12px}
+.mclaim-edit{border-top:1px solid var(--border);padding-top:14px;margin-top:4px}
 
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -248,7 +257,7 @@ thead th.th-v:last-child{border-right:none}
       <div class="mlbl">Scoring Rationale</div>
       <div class="mrat" id="mRat">—</div>
     </div>
-    <div class="mfb">
+    <div class="mfb" id="mfb">
       <div class="mflbl">Community Feedback <span class="achip">ASRG Members Only</span></div>
       <div class="vrow">
         <button class="vbtn up" id="vUp" onclick="doVote('up')">👍 Agree</button>
@@ -257,11 +266,12 @@ thead th.th-v:last-child{border-right:none}
       </div>
       <textarea class="ftxt" id="ftxt" placeholder="Add context, a correction, or a source URL… (ASRG portal sign-in required to submit)"></textarea>
       <div class="fact">
-        <button class="bsub" onclick="doSubmit()">Submit Feedback</button>
-        <button class="blogin" onclick="doLogin()">Sign in →</button>
+        <button class="bsub" id="bsub" onclick="doSubmit()">Submit Feedback</button>
+        <button class="blogin" id="blogin" onclick="doLogin()">Sign in →</button>
         <span class="anote" id="anote">Not signed in</span>
       </div>
     </div>
+    <div class="mclaim" id="mClaim" style="display:none"></div>
   </div>
 </div>
 
@@ -585,6 +595,9 @@ function build(){
         ltd.innerHTML = `<span class="fname">${f.name}</span><span class="fdesc">${f.desc}</span>`;
         tr.appendChild(ltd);
 
+        // Feature ID slug used as vote key component (computed once per feature)
+        const featId = sec.id + '__' + f.name.toLowerCase().replace(/[^a-z0-9]+/g,'_');
+
         VENDORS.forEach(v=>{
           const td = document.createElement('td');
           if(f.type==='info'){
@@ -603,8 +616,28 @@ function build(){
             pip.className=`spip ${s}`;
             pip.textContent=s;
             pip.title={F:'Fully Fulfills',P:'Partially Fulfills',N:'Does Not Fulfill',U:'Unverified / N/A'}[s];
-            pip.onclick=()=>openModal(v.name,f.name,sec.label,s,f.notes?.[v.key]||'No rationale available. Submit feedback to contribute evidence.');
+            const voteKey = v.key + ':' + featId;
+            const inVotableGroup = grp.id !== 'org';
+            pip.onclick=()=>openModal({
+              vendorKey: v.key, vendorName: v.name,
+              featName: f.name, featId, voteKey,
+              secLabel: sec.label, score: s,
+              rationale: f.notes?.[v.key]||'No rationale available. Submit feedback to contribute evidence.',
+              inVotableGroup
+            });
             td.appendChild(pip);
+            // Vote tally badge — shown only for csms/it groups
+            if(inVotableGroup){
+              const tally = (window.ASRG_VOTE_SUMMARY||{})[voteKey]||{up:0,down:0};
+              const vt = document.createElement('span');
+              vt.className='vtally';
+              vt.dataset.vk=voteKey;
+              if(tally.up>0||tally.down>0){
+                vt.innerHTML=(tally.up>0?`<span class="vt-up">▲${tally.up}</span>`:'')+
+                              (tally.down>0?`<span class="vt-dn">▼${tally.down}</span>`:'');
+              }
+              td.appendChild(vt);
+            }
           }
           tr.appendChild(td);
         });
@@ -628,38 +661,216 @@ function toggle(id){
 const SLBL={F:'Fully Fulfills',P:'Partially Fulfills',N:'Does Not Fulfill',U:'Unverified / N/A'};
 const SNOTE={F:'Contributes +1.0 to domain score',P:'Contributes +0.5 to domain score',N:'Contributes +0.0 to domain score',U:'Excluded from domain score'};
 let activeVote=null;
+let _modalCtx=null;
+let _claimScore=null;
 
-function openModal(vendor,feat,sec,score,rationale){
-  document.getElementById('mTag').textContent=`${vendor}  ·  ${sec}`;
-  document.getElementById('mName').textContent=feat;
-  const big=document.getElementById('mBig');
-  big.textContent=score; big.className=`msbig ${score}`;
-  document.getElementById('mLbl').textContent=SLBL[score]||score;
-  document.getElementById('mSub').textContent=SNOTE[score]||'';
-  document.getElementById('mRat').textContent=rationale;
-  document.getElementById('ftxt').value='';
-  document.getElementById('vCnt').textContent=`${Math.floor(Math.random()*20)+2} community votes`;
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+function openModal(ctx){
+  _modalCtx=ctx;
   activeVote=null;
-  document.getElementById('vUp').classList.remove('active');
-  document.getElementById('vDown').classList.remove('active');
-  document.getElementById('anote').textContent='Not signed in';
+  _claimScore=null;
+
+  document.getElementById('mTag').textContent=`${ctx.vendorName}  ·  ${ctx.secLabel}`;
+  document.getElementById('mName').textContent=ctx.featName;
+  const big=document.getElementById('mBig');
+  big.textContent=ctx.score; big.className=`msbig ${ctx.score}`;
+  document.getElementById('mLbl').textContent=SLBL[ctx.score]||ctx.score;
+  document.getElementById('mSub').textContent=SNOTE[ctx.score]||'';
+  document.getElementById('mRat').textContent=ctx.rationale;
+  document.getElementById('ftxt').value='';
+
+  // ── Voting section ──────────────────────────────────────────────────────────
+  const mfb=document.getElementById('mfb');
+  if(!ctx.inVotableGroup){
+    mfb.style.display='none';
+  } else {
+    mfb.style.display='';
+    const auth=window.ASRG_AUTH||{};
+    const summary=(window.ASRG_VOTE_SUMMARY||{})[ctx.voteKey]||{up:0,down:0};
+    const myVote=(window.ASRG_MY_VOTES||{})[ctx.voteKey];
+
+    // Pre-select user's existing vote
+    document.getElementById('vUp').classList.remove('active');
+    document.getElementById('vDown').classList.remove('active');
+    if(myVote){
+      activeVote=myVote.vote;
+      document.getElementById(myVote.vote==='up'?'vUp':'vDown').classList.add('active');
+      document.getElementById('ftxt').value=myVote.note||'';
+    }
+
+    const total=summary.up+summary.down;
+    document.getElementById('vCnt').textContent=total>0?`▲${summary.up}  ▼${summary.down}`:'No votes yet';
+
+    // Show submit vs sign-in based on auth state
+    if(auth.loggedIn){
+      document.getElementById('bsub').style.display='';
+      document.getElementById('blogin').style.display='none';
+      document.getElementById('anote').textContent=auth.displayName||'Signed in';
+    } else {
+      document.getElementById('bsub').style.display='none';
+      document.getElementById('blogin').style.display='';
+      document.getElementById('anote').textContent='Not signed in';
+    }
+  }
+
+  // ── Vendor claim section ────────────────────────────────────────────────────
+  updateClaimSection(ctx);
+
   document.getElementById('overlay').classList.add('open');
 }
+
+function updateClaimSection(ctx){
+  _claimScore=null;
+  const el=document.getElementById('mClaim');
+  if(!el) return;
+  el.innerHTML=''; el.style.display='none';
+  if(!ctx.inVotableGroup) return;
+
+  const auth=window.ASRG_AUTH||{};
+  const claims=(window.ASRG_VENDOR_CLAIMS||{})[ctx.vendorKey]||{};
+  const approved=claims[ctx.featId];
+  const existing=(window.ASRG_MY_CLAIMS||{})[ctx.featId];
+
+  let html='';
+
+  // Approved vendor response (visible to everyone)
+  if(approved){
+    html+=`<div class="mclaim-approved">
+      <div class="mlbl">Vendor Response</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+        <span class="spip ${approved.score}" style="cursor:default;pointer-events:none">${approved.score}</span>
+        <span style="font-size:11px;color:var(--text2)">${escHtml(SLBL[approved.score]||approved.score)}</span>
+      </div>
+      ${approved.note?`<div class="mrat" style="border-left-color:var(--blue)">${escHtml(approved.note)}</div>`:''}
+    </div>`;
+  }
+
+  // Vendor self-assessment form (only visible to the owning vendor)
+  if(auth.isVendor&&auth.vendorKey===ctx.vendorKey){
+    const st=existing?existing.status:null;
+    const stMap={
+      pending: {bg:'#fef3c7',bd:'#fde68a',cl:'#92400e'},
+      approved:{bg:'var(--green-bg)',bd:'var(--green-bd)',cl:'var(--green)'},
+      rejected:{bg:'var(--red-bg)',  bd:'var(--red-bd)',  cl:'var(--red)'},
+    };
+    const sm=st?stMap[st]:null;
+    const stBadge=sm?`<span style="font-family:var(--mono);font-size:8px;padding:1px 6px;border-radius:3px;background:${sm.bg};border:1px solid ${sm.bd};color:${sm.cl}">${st.toUpperCase()}</span>`:'';
+    html+=`<div class="mclaim-edit">
+      <div class="mlbl" style="margin-bottom:9px">Your Self-Assessment ${stBadge}</div>
+      <div style="display:flex;gap:7px;margin-bottom:10px">
+        ${['F','P','N','U'].map(sc=>`<button onclick="selectClaimScore('${sc}')" class="spip ${sc}" id="claimBtn_${sc}" style="cursor:pointer;width:32px;height:32px;border:2px solid transparent">${sc}</button>`).join('')}
+      </div>
+      <textarea id="claimNote" class="ftxt" style="min-height:60px;margin-bottom:8px" placeholder="Explain how your tool meets this criterion — include version or documentation reference.">${existing?escHtml(existing.note||''):''}</textarea>
+      <button class="bsub" onclick="submitClaim('${escHtml(ctx.featId)}')">Submit for Review</button>
+      <span style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-left:8px">ASRG will review &amp; approve</span>
+    </div>`;
+  }
+
+  if(html){
+    el.innerHTML=html;
+    el.style.display='';
+    if(existing&&existing.score) selectClaimScore(existing.score);
+  }
+}
+
+function selectClaimScore(sc){
+  _claimScore=sc;
+  ['F','P','N','U'].forEach(s=>{
+    const b=document.getElementById('claimBtn_'+s);
+    if(b) b.style.outline=s===sc?'2px solid var(--text)':'none';
+  });
+}
+
+async function submitClaim(featId){
+  const rest=window.ASRG_REST||{};
+  const note=(document.getElementById('claimNote')||{}).value||'';
+  if(!_claimScore){alert('Please select a score first.');return;}
+  try{
+    const r=await fetch(rest.base+'/claims',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-WP-Nonce':rest.nonce},
+      body:JSON.stringify({feature_id:featId,score:_claimScore,note:note||null}),
+    });
+    const data=await r.json();
+    if(r.ok){
+      window.ASRG_MY_CLAIMS=window.ASRG_MY_CLAIMS||{};
+      window.ASRG_MY_CLAIMS[featId]={id:data.id,score:_claimScore,note,status:'pending'};
+      updateClaimSection(_modalCtx);
+      alert('Submitted for ASRG review. Thank you!');
+    } else {
+      alert('Error: '+(data.message||'Could not submit.'));
+    }
+  } catch(e){alert('Network error. Please try again.');}
+}
+
 function closeModal(){document.getElementById('overlay').classList.remove('open')}
 document.getElementById('overlay').addEventListener('click',e=>{if(e.target===document.getElementById('overlay'))closeModal()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
 
 function doVote(dir){
+  const auth=window.ASRG_AUTH||{};
+  if(!auth.loggedIn){doLogin();return;}
   activeVote=dir;
   document.getElementById('vUp').classList.toggle('active',dir==='up');
   document.getElementById('vDown').classList.toggle('active',dir==='down');
-  document.getElementById('anote').textContent='Sign in to save your vote';
 }
-function doSubmit(){
-  if(!activeVote&&!document.getElementById('ftxt').value.trim()){alert('Please cast a vote or add a comment.');return}
-  doLogin();
+
+async function doSubmit(){
+  const auth=window.ASRG_AUTH||{};
+  if(!auth.loggedIn){doLogin();return;}
+  const ctx=_modalCtx;
+  const note=document.getElementById('ftxt').value.trim();
+  if(!activeVote){alert('Please click Agree or Dispute first.');return;}
+  const rest=window.ASRG_REST||{};
+  try{
+    const r=await fetch(rest.base+'/votes',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-WP-Nonce':rest.nonce},
+      body:JSON.stringify({feature_id:ctx.featId,vendor_key:ctx.vendorKey,vote:activeVote,note:note||null}),
+    });
+    const data=await r.json();
+    if(r.ok){
+      // Update in-memory caches
+      window.ASRG_VOTE_SUMMARY=window.ASRG_VOTE_SUMMARY||{};
+      window.ASRG_MY_VOTES=window.ASRG_MY_VOTES||{};
+      const prev=window.ASRG_MY_VOTES[ctx.voteKey];
+      if(!window.ASRG_VOTE_SUMMARY[ctx.voteKey]) window.ASRG_VOTE_SUMMARY[ctx.voteKey]={up:0,down:0};
+      const s=window.ASRG_VOTE_SUMMARY[ctx.voteKey];
+      if(prev) s[prev.vote]=Math.max(0,(s[prev.vote]||0)-1);
+      if(!data.retracted) s[activeVote]=(s[activeVote]||0)+1;
+      if(data.retracted){
+        delete window.ASRG_MY_VOTES[ctx.voteKey];
+        activeVote=null;
+        document.getElementById('vUp').classList.remove('active');
+        document.getElementById('vDown').classList.remove('active');
+      } else {
+        window.ASRG_MY_VOTES[ctx.voteKey]={id:data.id,vote:activeVote,note:note||null};
+      }
+      // Refresh modal vote count display
+      const total=s.up+s.down;
+      document.getElementById('vCnt').textContent=total>0?`▲${s.up}  ▼${s.down}`:'No votes yet';
+      // Refresh tally in the table cell
+      updateTableTally(ctx.voteKey,s);
+    } else {
+      alert('Error: '+(data.message||'Could not save vote.'));
+    }
+  } catch(e){alert('Network error. Please try again.');}
 }
-function doLogin(){alert('Redirect to ASRG portal authentication.\n\nReplace with garage.asrg.io SSO endpoint.')}
+
+function updateTableTally(voteKey,tally){
+  const el=document.querySelector(`.vtally[data-vk="${CSS.escape(voteKey)}"]`);
+  if(!el) return;
+  const up=tally?.up||0, dn=tally?.down||0;
+  el.innerHTML=(up>0?`<span class="vt-up">▲${up}</span>`:'')+
+               (dn>0?`<span class="vt-dn">▼${dn}</span>`:'');
+}
+
+function doLogin(){
+  const auth=window.ASRG_AUTH||{};
+  const base=auth.loginUrl||'https://garage.asrg.io';
+  window.location.href=base+'?redirect_to='+encodeURIComponent(window.location.href);
+}
 
 build();
 </script>
