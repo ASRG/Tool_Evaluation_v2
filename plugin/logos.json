@@ -1,11 +1,11 @@
 {
   "_comment": "Map vendor keys to logo image URLs. Leave a value as null (or remove the key) to fall back to the auto-fetched Clearbit logo. Set a URL to use your own hosted image instead.",
-  "c2a":       null,
-  "cybellum":  null,
-  "manifest":  null,
+  "c2a":       "https://asrg.io/wp-content/uploads/2026/03/c2a-logo.png",
+  "cybellum":  "https://asrg.io/wp-content/uploads/2026/03/cybellum-logo.png",
+  "manifest":  "https://asrg.io/wp-content/uploads/2025/10/Manifest_horizontal_black-scaled.png",
   "vxlabs":    null,
-  "itemis":    null,
-  "vicone":    null,
+  "itemis":    "https://asrg.io/wp-content/uploads/2022/11/Itemis.png",
+  "vicone":    "https://asrg.io/wp-content/uploads/2023/09/VicOne-Logo_2-secondary-light.png",
   "vultara":   null,
   "autocrypt": null
 }
