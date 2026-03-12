@@ -872,6 +872,49 @@ function doLogin(){
   window.location.href=base+'?redirect_to='+encodeURIComponent(window.location.href);
 }
 
+// ─── VENDOR PROFILES — merge approved data into VENDORS + info rows ──────────
+function applyVendorProfiles() {
+  const profiles = window.ASRG_VENDOR_PROFILES || {};
+  if (!Object.keys(profiles).length) return;
+
+  // Profile field → info feature name in org/A1 section
+  const FIELD_TO_FEAT = {
+    hq:        'Headquarters',
+    founded:   'Founded',
+    funding:   'Funding Status',
+    employees: 'Employees (est.)',
+    investors: 'Key Investors / Owners',
+    website:   'Website',
+    productUrl:'Product URL',
+    crunchbase:'Crunchbase',
+  };
+
+  // Update VENDORS entries (used for logo resolution, modal data, etc.)
+  VENDORS.forEach(v => {
+    const p = profiles[v.key];
+    if (!p) return;
+    ['desc','product','productUrl','website','hq','founded','funding','employees','investors','crunchbase']
+      .forEach(f => { if (p[f]) v[f] = p[f]; });
+  });
+
+  // Update info-type feature values in the org group so table cells show approved data
+  const orgGroup = GROUPS.find(g => g.id === 'org');
+  if (orgGroup) {
+    orgGroup.sections.forEach(sec => {
+      sec.features.forEach(f => {
+        if (f.type !== 'info') return;
+        const field = Object.entries(FIELD_TO_FEAT).find(([,fname]) => fname === f.name)?.[0];
+        if (!field) return;
+        VENDORS.forEach(v => {
+          const p = profiles[v.key];
+          if (p && p[field]) f.values[v.key] = p[field];
+        });
+      });
+    });
+  }
+}
+
+applyVendorProfiles();
 build();
 </script>
 </body>

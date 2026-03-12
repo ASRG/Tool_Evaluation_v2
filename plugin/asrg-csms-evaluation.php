@@ -3,7 +3,8 @@
  * Plugin Name:       ASRG CSMS Tool Evaluation
  * Plugin URI:        https://github.com/asrg-community/asrg-csms-evaluation
  * Description:       Embeds the ASRG CSMS Tool Evaluation comparison table via the [asrg_csms_evaluation] shortcode.
- * Version:           2.0.0
+ *                    Also provides [asrg_vendor_portal] for authenticated vendor profile management.
+ * Version:           2.1.0
  * Author:            Automotive Security Research Group
  * Author URI:        https://asrg.io
  * License:           GPL-2.0-or-later
@@ -16,12 +17,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // Prevent direct access
 }
 
-// ── DB TABLE NAMES ─────────────────────────────────────────────────────────────
-function asrg_csms_votes_table()  { global $wpdb; return $wpdb->prefix . 'asrg_csms_votes'; }
-function asrg_csms_claims_table() { global $wpdb; return $wpdb->prefix . 'asrg_csms_vendor_claims'; }
+define( 'ASRG_CSMS_DB_VERSION', '2.1' );
 
-// ── DB VERSION ─────────────────────────────────────────────────────────────────
-define( 'ASRG_CSMS_DB_VERSION', '2.0' );
+// ── TABLE NAME HELPERS ─────────────────────────────────────────────────────────
+function asrg_csms_votes_table()    { global $wpdb; return $wpdb->prefix . 'asrg_csms_votes'; }
+function asrg_csms_claims_table()   { global $wpdb; return $wpdb->prefix . 'asrg_csms_vendor_claims'; }
+function asrg_csms_profiles_table() { global $wpdb; return $wpdb->prefix . 'asrg_csms_vendor_profiles'; }
+
+// ── KNOWN VENDOR LIST (single source of truth) ────────────────────────────────
+function asrg_csms_vendor_list() {
+	return [
+		'c2a'       => 'C2A EvSec',
+		'cybellum'  => 'Cybellum',
+		'manifest'  => 'Manifest Cyber',
+		'vxlabs'    => 'VxLabs',
+		'itemis'    => 'Itemis',
+		'vicone'    => 'VicOne',
+		'vultara'   => 'Vultara',
+		'autocrypt' => 'AutoCrypt',
+	];
+}
 
 // ── CREATE TABLES ──────────────────────────────────────────────────────────────
 function asrg_csms_create_tables() {
@@ -44,42 +59,118 @@ function asrg_csms_create_tables() {
 	) $charset;";
 
 	$claims_sql = "CREATE TABLE IF NOT EXISTS " . asrg_csms_claims_table() . " (
-		id          BIGINT(20) UNSIGNED         NOT NULL AUTO_INCREMENT,
-		vendor_key  VARCHAR(40)                 NOT NULL,
-		feature_id  VARCHAR(120)                NOT NULL,
-		score       ENUM('F','P','N','U')        NOT NULL,
-		note        TEXT                         DEFAULT NULL,
-		user_id     BIGINT(20) UNSIGNED          NOT NULL,
+		id          BIGINT(20) UNSIGNED               NOT NULL AUTO_INCREMENT,
+		vendor_key  VARCHAR(40)                        NOT NULL,
+		feature_id  VARCHAR(120)                       NOT NULL,
+		score       ENUM('F','P','N','U')              NOT NULL,
+		note        TEXT                               DEFAULT NULL,
+		user_id     BIGINT(20) UNSIGNED                NOT NULL,
 		status      ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
-		created_at  DATETIME                     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-		updated_at  DATETIME                     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+		created_at  DATETIME                           NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		updated_at  DATETIME                           NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 		PRIMARY KEY (id),
 		UNIQUE KEY unique_claim (vendor_key, feature_id),
 		KEY user_id (user_id),
 		KEY status  (status)
 	) $charset;";
 
+	$profiles_sql = "CREATE TABLE IF NOT EXISTS " . asrg_csms_profiles_table() . " (
+		id             BIGINT(20) UNSIGNED               NOT NULL AUTO_INCREMENT,
+		vendor_key     VARCHAR(40)                        NOT NULL,
+		profile_json   LONGTEXT                           NOT NULL,
+		user_id        BIGINT(20) UNSIGNED                NOT NULL,
+		status         ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+		reviewer_note  TEXT                               DEFAULT NULL,
+		submitted_at   DATETIME                           NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		reviewed_at    DATETIME                           DEFAULT NULL,
+		PRIMARY KEY (id),
+		UNIQUE KEY vendor_key (vendor_key),
+		KEY status  (status),
+		KEY user_id (user_id)
+	) $charset;";
+
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 	dbDelta( $votes_sql );
 	dbDelta( $claims_sql );
+	dbDelta( $profiles_sql );
 	update_option( 'asrg_csms_db_version', ASRG_CSMS_DB_VERSION );
 }
 
 register_activation_hook( __FILE__, 'asrg_csms_create_tables' );
 
-// Also run on plugins_loaded to handle version upgrades / manual activations
 add_action( 'plugins_loaded', function () {
 	if ( get_option( 'asrg_csms_db_version' ) !== ASRG_CSMS_DB_VERSION ) {
 		asrg_csms_create_tables();
 	}
 } );
 
-// ── PERMISSION HELPER ──────────────────────────────────────────────────────────
+// ── ADMIN UI: VENDOR KEY ASSIGNMENT ──────────────────────────────────────────
+add_action( 'show_user_profile',       'asrg_csms_render_vendor_key_field' );
+add_action( 'edit_user_profile',       'asrg_csms_render_vendor_key_field' );
+add_action( 'personal_options_update', 'asrg_csms_save_vendor_key_field' );
+add_action( 'edit_user_profile_update','asrg_csms_save_vendor_key_field' );
+
+function asrg_csms_render_vendor_key_field( $user ) {
+	if ( ! current_user_can( 'manage_options' ) ) return;
+
+	$current      = get_user_meta( $user->ID, 'asrg_vendor_key', true );
+	$vendors      = asrg_csms_vendor_list();
+	$has_role     = in_array( 'company', (array) $user->roles );
+	$role_warning = ! $has_role
+		? '<span style="color:#b45309;font-weight:500">⚠ User does not have the <code>company</code> role — vendor features will be inactive.</span>'
+		: '<span style="color:#16a34a;font-weight:500">✓ User has the <code>company</code> role.</span>';
+	?>
+	<h2 style="border-top:1px solid #eee;padding-top:20px;margin-top:20px">ASRG CSMS — Vendor Company</h2>
+	<table class="form-table" role="presentation">
+	<tr>
+		<th><label for="asrg_vendor_key">Linked Vendor</label></th>
+		<td>
+			<?php wp_nonce_field( 'asrg_csms_vendor_key_' . $user->ID, 'asrg_csms_vendor_nonce' ); ?>
+			<select name="asrg_vendor_key" id="asrg_vendor_key" style="min-width:220px">
+				<option value="">— None (not a vendor) —</option>
+				<?php foreach ( $vendors as $key => $name ) : ?>
+					<option value="<?php echo esc_attr( $key ); ?>" <?php selected( $current, $key ); ?>>
+						<?php echo esc_html( $name ); ?> (<?php echo esc_html( $key ); ?>)
+					</option>
+				<?php endforeach; ?>
+			</select>
+			<p class="description" style="margin-top:6px"><?php echo $role_warning; ?></p>
+			<p class="description">Select the vendor company this user can submit profile updates and self-assessments for. Save the user profile after changing.</p>
+		</td>
+	</tr>
+	</table>
+	<?php
+}
+
+function asrg_csms_save_vendor_key_field( $user_id ) {
+	if ( ! current_user_can( 'manage_options' ) ) return;
+	if ( ! isset( $_POST['asrg_csms_vendor_nonce'] )
+		|| ! wp_verify_nonce( $_POST['asrg_csms_vendor_nonce'], 'asrg_csms_vendor_key_' . $user_id ) ) {
+		return;
+	}
+	if ( ! isset( $_POST['asrg_vendor_key'] ) ) return;
+
+	$vk      = sanitize_text_field( $_POST['asrg_vendor_key'] );
+	$allowed = array_keys( asrg_csms_vendor_list() );
+
+	if ( empty( $vk ) ) {
+		delete_user_meta( $user_id, 'asrg_vendor_key' );
+	} elseif ( in_array( $vk, $allowed ) ) {
+		update_user_meta( $user_id, 'asrg_vendor_key', $vk );
+	}
+}
+
+// ── PERMISSION HELPERS ────────────────────────────────────────────────────────
 function asrg_csms_is_vendor_user() {
 	if ( ! is_user_logged_in() ) return false;
 	$user = wp_get_current_user();
 	$vk   = get_user_meta( $user->ID, 'asrg_vendor_key', true );
 	return in_array( 'company', (array) $user->roles ) && ! empty( $vk );
+}
+
+function asrg_csms_get_vendor_key( $user_id = null ) {
+	$uid = $user_id ?: get_current_user_id();
+	return get_user_meta( $uid, 'asrg_vendor_key', true );
 }
 
 // ── REST API REGISTRATION ─────────────────────────────────────────────────────
@@ -88,21 +179,17 @@ add_action( 'rest_api_init', 'asrg_csms_register_routes' );
 function asrg_csms_register_routes() {
 	$ns = 'asrg-csms/v1';
 
-	// GET /votes/summary — public
+	// ── votes ──────────────────────────────────────────────────────────────────
 	register_rest_route( $ns, '/votes/summary', [
 		'methods'             => 'GET',
 		'callback'            => 'asrg_csms_rest_vote_summary',
 		'permission_callback' => '__return_true',
 	] );
-
-	// GET /votes/mine — auth required
 	register_rest_route( $ns, '/votes/mine', [
 		'methods'             => 'GET',
 		'callback'            => 'asrg_csms_rest_my_votes',
 		'permission_callback' => 'is_user_logged_in',
 	] );
-
-	// POST /votes — auth required
 	register_rest_route( $ns, '/votes', [
 		'methods'             => 'POST',
 		'callback'            => 'asrg_csms_rest_post_vote',
@@ -114,25 +201,19 @@ function asrg_csms_register_routes() {
 			'note'       => [ 'required' => false, 'type' => 'string', 'sanitize_callback' => 'sanitize_textarea_field' ],
 		],
 	] );
-
-	// DELETE /votes/(?P<id>\d+) — auth, own votes only
 	register_rest_route( $ns, '/votes/(?P<id>\d+)', [
 		'methods'             => 'DELETE',
 		'callback'            => 'asrg_csms_rest_delete_vote',
 		'permission_callback' => 'is_user_logged_in',
-		'args'                => [
-			'id' => [ 'required' => true, 'type' => 'integer' ],
-		],
+		'args'                => [ 'id' => [ 'required' => true, 'type' => 'integer' ] ],
 	] );
 
-	// GET /claims/approved — public
+	// ── claims ─────────────────────────────────────────────────────────────────
 	register_rest_route( $ns, '/claims/approved', [
 		'methods'             => 'GET',
 		'callback'            => 'asrg_csms_rest_approved_claims',
 		'permission_callback' => '__return_true',
 	] );
-
-	// POST /claims — company role + asrg_vendor_key meta required
 	register_rest_route( $ns, '/claims', [
 		'methods'             => 'POST',
 		'callback'            => 'asrg_csms_rest_post_claim',
@@ -143,10 +224,29 @@ function asrg_csms_register_routes() {
 			'note'       => [ 'required' => false, 'type' => 'string', 'sanitize_callback' => 'sanitize_textarea_field' ],
 		],
 	] );
+
+	// ── vendor profiles ────────────────────────────────────────────────────────
+	register_rest_route( $ns, '/vendor-profiles/approved', [
+		'methods'             => 'GET',
+		'callback'            => 'asrg_csms_rest_approved_profiles',
+		'permission_callback' => '__return_true',
+	] );
+	register_rest_route( $ns, '/vendor-profile', [
+		'methods'             => 'GET',
+		'callback'            => 'asrg_csms_rest_get_my_profile',
+		'permission_callback' => 'asrg_csms_is_vendor_user',
+	] );
+	register_rest_route( $ns, '/vendor-profile', [
+		'methods'             => 'PUT',
+		'callback'            => 'asrg_csms_rest_put_vendor_profile',
+		'permission_callback' => 'asrg_csms_is_vendor_user',
+		'args'                => [
+			'profile' => [ 'required' => true, 'type' => 'object' ],
+		],
+	] );
 }
 
-// ── REST CALLBACKS ─────────────────────────────────────────────────────────────
-
+// ── REST CALLBACKS — VOTES ────────────────────────────────────────────────────
 function asrg_csms_rest_vote_summary() {
 	global $wpdb;
 	$rows = $wpdb->get_results(
@@ -158,8 +258,8 @@ function asrg_csms_rest_vote_summary() {
 	$out = [];
 	foreach ( $rows as $row ) {
 		$key = $row['vendor_key'] . ':' . $row['feature_id'];
-		if ( ! isset( $out[ $key ] ) ) $out[ $key ] = [ 'up' => 0, 'down' => 0 ];
-		$out[ $key ][ $row['vote'] ] = (int) $row['cnt'];
+		if ( ! isset( $out[$key] ) ) $out[$key] = [ 'up' => 0, 'down' => 0 ];
+		$out[$key][ $row['vote'] ] = (int) $row['cnt'];
 	}
 	return rest_ensure_response( $out );
 }
@@ -169,7 +269,7 @@ function asrg_csms_rest_my_votes() {
 	$uid  = get_current_user_id();
 	$rows = $wpdb->get_results(
 		$wpdb->prepare(
-			"SELECT id, feature_id, vendor_key, vote, note FROM " . asrg_csms_votes_table() . " WHERE user_id = %d",
+			"SELECT id, feature_id, vendor_key, vote, note FROM " . asrg_csms_votes_table() . " WHERE user_id=%d",
 			$uid
 		),
 		ARRAY_A
@@ -177,7 +277,7 @@ function asrg_csms_rest_my_votes() {
 	$out = [];
 	foreach ( $rows as $row ) {
 		$key = $row['vendor_key'] . ':' . $row['feature_id'];
-		$out[ $key ] = [ 'id' => (int) $row['id'], 'vote' => $row['vote'], 'note' => $row['note'] ];
+		$out[$key] = [ 'id' => (int) $row['id'], 'vote' => $row['vote'], 'note' => $row['note'] ];
 	}
 	return rest_ensure_response( $out );
 }
@@ -185,39 +285,32 @@ function asrg_csms_rest_my_votes() {
 function asrg_csms_rest_post_vote( WP_REST_Request $req ) {
 	global $wpdb;
 	$uid        = get_current_user_id();
-	$feature_id = $req->get_param( 'feature_id' );
-	$vendor_key = $req->get_param( 'vendor_key' );
-	$vote       = $req->get_param( 'vote' );
-	$note       = $req->get_param( 'note' ) ?: null;
+	$feature_id = $req->get_param('feature_id');
+	$vendor_key = $req->get_param('vendor_key');
+	$vote       = $req->get_param('vote');
+	$note       = $req->get_param('note') ?: null;
 
-	// Validate slugs
-	if ( ! preg_match( '/^[a-z0-9_]+$/', $feature_id ) ) {
-		return new WP_Error( 'invalid_feature_id', 'Invalid feature_id.', [ 'status' => 400 ] );
-	}
-	if ( ! preg_match( '/^[a-z0-9_]+$/', $vendor_key ) ) {
-		return new WP_Error( 'invalid_vendor_key', 'Invalid vendor_key.', [ 'status' => 400 ] );
-	}
+	if ( ! preg_match('/^[a-z0-9_]+$/', $feature_id) )
+		return new WP_Error('invalid_feature_id', 'Invalid feature_id.', ['status'=>400]);
+	if ( ! preg_match('/^[a-z0-9_]+$/', $vendor_key) )
+		return new WP_Error('invalid_vendor_key', 'Invalid vendor_key.', ['status'=>400]);
 
 	$table    = asrg_csms_votes_table();
-	$existing = $wpdb->get_row(
-		$wpdb->prepare(
-			"SELECT id, vote FROM $table WHERE feature_id=%s AND vendor_key=%s AND user_id=%d",
-			$feature_id, $vendor_key, $uid
-		)
-	);
+	$existing = $wpdb->get_row( $wpdb->prepare(
+		"SELECT id, vote FROM $table WHERE feature_id=%s AND vendor_key=%s AND user_id=%d",
+		$feature_id, $vendor_key, $uid
+	) );
 
 	if ( $existing ) {
-		// Same vote + no note = retract (toggle off)
 		if ( $existing->vote === $vote && $note === null ) {
-			$wpdb->delete( $table, [ 'id' => $existing->id ] );
-			return rest_ensure_response( [ 'id' => null, 'vote' => null, 'retracted' => true ] );
+			$wpdb->delete( $table, ['id' => $existing->id] );
+			return rest_ensure_response(['id'=>null,'vote'=>null,'retracted'=>true]);
 		}
-		$wpdb->update(
-			$table,
-			[ 'vote' => $vote, 'note' => $note, 'updated_at' => current_time( 'mysql' ) ],
-			[ 'id'   => $existing->id ]
+		$wpdb->update( $table,
+			['vote'=>$vote,'note'=>$note,'updated_at'=>current_time('mysql')],
+			['id'=>$existing->id]
 		);
-		return rest_ensure_response( [ 'id' => (int) $existing->id, 'vote' => $vote ] );
+		return rest_ensure_response(['id'=>(int)$existing->id,'vote'=>$vote]);
 	}
 
 	$wpdb->insert( $table, [
@@ -226,29 +319,26 @@ function asrg_csms_rest_post_vote( WP_REST_Request $req ) {
 		'user_id'    => $uid,
 		'vote'       => $vote,
 		'note'       => $note,
-		'created_at' => current_time( 'mysql' ),
-		'updated_at' => current_time( 'mysql' ),
+		'created_at' => current_time('mysql'),
+		'updated_at' => current_time('mysql'),
 	] );
-	return rest_ensure_response( [ 'id' => (int) $wpdb->insert_id, 'vote' => $vote ] );
+	return rest_ensure_response(['id'=>(int)$wpdb->insert_id,'vote'=>$vote]);
 }
 
 function asrg_csms_rest_delete_vote( WP_REST_Request $req ) {
 	global $wpdb;
 	$uid     = get_current_user_id();
-	$vote_id = (int) $req->get_param( 'id' );
+	$vote_id = (int) $req->get_param('id');
 	$table   = asrg_csms_votes_table();
-
-	$row = $wpdb->get_row( $wpdb->prepare(
-		"SELECT id FROM $table WHERE id=%d AND user_id=%d",
-		$vote_id, $uid
+	$row     = $wpdb->get_row( $wpdb->prepare(
+		"SELECT id FROM $table WHERE id=%d AND user_id=%d", $vote_id, $uid
 	) );
-	if ( ! $row ) {
-		return new WP_Error( 'not_found', 'Vote not found or not yours.', [ 'status' => 404 ] );
-	}
-	$wpdb->delete( $table, [ 'id' => $vote_id ] );
-	return rest_ensure_response( [ 'deleted' => true ] );
+	if ( ! $row ) return new WP_Error('not_found','Vote not found or not yours.',['status'=>404]);
+	$wpdb->delete( $table, ['id'=>$vote_id] );
+	return rest_ensure_response(['deleted'=>true]);
 }
 
+// ── REST CALLBACKS — CLAIMS ───────────────────────────────────────────────────
 function asrg_csms_rest_approved_claims() {
 	global $wpdb;
 	$rows = $wpdb->get_results(
@@ -257,37 +347,34 @@ function asrg_csms_rest_approved_claims() {
 	);
 	$out = [];
 	foreach ( $rows as $row ) {
-		if ( ! isset( $out[ $row['vendor_key'] ] ) ) $out[ $row['vendor_key'] ] = [];
-		$out[ $row['vendor_key'] ][ $row['feature_id'] ] = [ 'score' => $row['score'], 'note' => $row['note'] ];
+		if ( ! isset($out[$row['vendor_key']]) ) $out[$row['vendor_key']] = [];
+		$out[$row['vendor_key']][$row['feature_id']] = ['score'=>$row['score'],'note'=>$row['note']];
 	}
-	return rest_ensure_response( $out );
+	return rest_ensure_response($out);
 }
 
 function asrg_csms_rest_post_claim( WP_REST_Request $req ) {
 	global $wpdb;
 	$user       = wp_get_current_user();
-	$vendor_key = get_user_meta( $user->ID, 'asrg_vendor_key', true );
-	$feature_id = $req->get_param( 'feature_id' );
-	$score      = $req->get_param( 'score' );
-	$note       = $req->get_param( 'note' ) ?: null;
+	$vendor_key = asrg_csms_get_vendor_key($user->ID);
+	$feature_id = $req->get_param('feature_id');
+	$score      = $req->get_param('score');
+	$note       = $req->get_param('note') ?: null;
 
-	if ( ! preg_match( '/^[a-z0-9_]+$/', $feature_id ) ) {
-		return new WP_Error( 'invalid_feature_id', 'Invalid feature_id.', [ 'status' => 400 ] );
-	}
+	if ( ! preg_match('/^[a-z0-9_]+$/', $feature_id) )
+		return new WP_Error('invalid_feature_id','Invalid feature_id.',['status'=>400]);
 
 	$table    = asrg_csms_claims_table();
 	$existing = $wpdb->get_row( $wpdb->prepare(
-		"SELECT id FROM $table WHERE vendor_key=%s AND feature_id=%s",
-		$vendor_key, $feature_id
+		"SELECT id FROM $table WHERE vendor_key=%s AND feature_id=%s", $vendor_key, $feature_id
 	) );
 
 	if ( $existing ) {
-		$wpdb->update(
-			$table,
-			[ 'score' => $score, 'note' => $note, 'status' => 'pending', 'user_id' => $user->ID, 'updated_at' => current_time( 'mysql' ) ],
-			[ 'id'    => $existing->id ]
+		$wpdb->update( $table,
+			['score'=>$score,'note'=>$note,'status'=>'pending','user_id'=>$user->ID,'updated_at'=>current_time('mysql')],
+			['id'=>$existing->id]
 		);
-		return rest_ensure_response( [ 'id' => (int) $existing->id, 'status' => 'pending' ] );
+		return rest_ensure_response(['id'=>(int)$existing->id,'status'=>'pending']);
 	}
 
 	$wpdb->insert( $table, [
@@ -297,70 +384,108 @@ function asrg_csms_rest_post_claim( WP_REST_Request $req ) {
 		'note'       => $note,
 		'user_id'    => $user->ID,
 		'status'     => 'pending',
-		'created_at' => current_time( 'mysql' ),
-		'updated_at' => current_time( 'mysql' ),
+		'created_at' => current_time('mysql'),
+		'updated_at' => current_time('mysql'),
 	] );
-	return rest_ensure_response( [ 'id' => (int) $wpdb->insert_id, 'status' => 'pending' ] );
+	return rest_ensure_response(['id'=>(int)$wpdb->insert_id,'status'=>'pending']);
 }
 
-// ── SHORTCODE ──────────────────────────────────────────────────────────────────
-function asrg_csms_evaluation_shortcode( $atts ) {
-	$atts = shortcode_atts( [], $atts, 'asrg_csms_evaluation' );
-
-	$html_file = plugin_dir_path( __FILE__ ) . 'asrg-csms-evaluation.html';
-
-	if ( ! file_exists( $html_file ) ) {
-		return '<p style="color:red;">ASRG CSMS Evaluation: <code>asrg-csms-evaluation.html</code> not found in plugin directory.</p>';
-	}
-
-	$raw = file_get_contents( $html_file );
-
-	// Strip the outer <html>/<head>/<body> wrapper — we only want the inner content
-	if ( preg_match( '/<body[^>]*>(.*)<\/body>/is', $raw, $matches ) ) {
-		$body = $matches[1];
-	} else {
-		$body = $raw;
-	}
-
-	// Extract <style> blocks from <head> and inline them at the top
-	$styles = '';
-	if ( preg_match_all( '/<style[^>]*>(.*?)<\/style>/is', $raw, $style_matches ) ) {
-		foreach ( $style_matches[1] as $css ) {
-			$styles .= '<style>' . $css . '</style>' . "\n";
-		}
-	}
-
-	// Extract Google Fonts link tags
-	$fonts = '';
-	if ( preg_match_all( '/<link[^>]+fonts\.googleapis\.com[^>]+>/i', $raw, $font_matches ) ) {
-		$fonts = implode( "\n", $font_matches[0] ) . "\n";
-	}
-
-	// Inject logos.json as a JS variable
-	$logos_js = '<script>window.ASRG_LOGOS = {};</script>' . "\n";
-	$logos_file = plugin_dir_path( __FILE__ ) . 'logos.json';
-	if ( file_exists( $logos_file ) ) {
-		$logos_raw  = file_get_contents( $logos_file );
-		$logos_data = json_decode( $logos_raw, true );
-		if ( is_array( $logos_data ) ) {
-			unset( $logos_data['_comment'] );
-			$logos_data = array_filter( $logos_data, function ( $v ) { return ! is_null( $v ); } );
-			$logos_js   = '<script>window.ASRG_LOGOS = ' . wp_json_encode( $logos_data ) . ';</script>' . "\n";
-		}
-	}
-
-	// ── AUTH & COMMUNITY DATA ──────────────────────────────────────────────────
+// ── REST CALLBACKS — VENDOR PROFILES ─────────────────────────────────────────
+function asrg_csms_rest_approved_profiles() {
 	global $wpdb;
+	$rows = $wpdb->get_results(
+		"SELECT vendor_key, profile_json FROM " . asrg_csms_profiles_table() . " WHERE status='approved'",
+		ARRAY_A
+	);
+	$out = [];
+	foreach ( $rows as $row ) {
+		$decoded = json_decode($row['profile_json'], true);
+		if ( is_array($decoded) ) $out[$row['vendor_key']] = $decoded;
+	}
+	return rest_ensure_response($out);
+}
 
+function asrg_csms_rest_get_my_profile() {
+	global $wpdb;
+	$vendor_key = asrg_csms_get_vendor_key();
+	$row = $wpdb->get_row( $wpdb->prepare(
+		"SELECT profile_json, status, reviewer_note, submitted_at FROM " . asrg_csms_profiles_table() . " WHERE vendor_key=%s",
+		$vendor_key
+	), ARRAY_A );
+
+	if ( ! $row ) return rest_ensure_response( null );
+
+	return rest_ensure_response([
+		'profile'       => json_decode($row['profile_json'], true),
+		'status'        => $row['status'],
+		'reviewer_note' => $row['reviewer_note'],
+		'submitted_at'  => $row['submitted_at'],
+	]);
+}
+
+function asrg_csms_rest_put_vendor_profile( WP_REST_Request $req ) {
+	global $wpdb;
+	$user       = wp_get_current_user();
+	$vendor_key = asrg_csms_get_vendor_key($user->ID);
+
+	// Whitelist allowed profile fields
+	$allowed_fields = [
+		'desc','product','productUrl','website','hq',
+		'founded','funding','employees','investors','crunchbase',
+	];
+	$raw     = $req->get_param('profile');
+	$profile = [];
+	foreach ( $allowed_fields as $f ) {
+		if ( isset($raw[$f]) ) {
+			$profile[$f] = sanitize_textarea_field( (string) $raw[$f] );
+		}
+	}
+
+	// Sanitize URLs
+	foreach (['productUrl','website','crunchbase'] as $url_field) {
+		if ( isset($profile[$url_field]) ) {
+			$profile[$url_field] = esc_url_raw($profile[$url_field]);
+		}
+	}
+
+	$json  = wp_json_encode($profile);
+	$table = asrg_csms_profiles_table();
+
+	$existing = $wpdb->get_var( $wpdb->prepare(
+		"SELECT id FROM $table WHERE vendor_key=%s", $vendor_key
+	) );
+
+	if ( $existing ) {
+		$wpdb->update( $table,
+			[ 'profile_json'=>$json, 'status'=>'pending', 'user_id'=>$user->ID,
+			  'reviewer_note'=>null, 'submitted_at'=>current_time('mysql'), 'reviewed_at'=>null ],
+			[ 'vendor_key'=>$vendor_key ]
+		);
+	} else {
+		$wpdb->insert( $table, [
+			'vendor_key'    => $vendor_key,
+			'profile_json'  => $json,
+			'user_id'       => $user->ID,
+			'status'        => 'pending',
+			'submitted_at'  => current_time('mysql'),
+		] );
+	}
+
+	return rest_ensure_response(['status'=>'pending','vendor_key'=>$vendor_key]);
+}
+
+// ── HELPER: LOAD COMMUNITY DATA FOR SHORTCODES ────────────────────────────────
+function asrg_csms_load_community_data() {
+	global $wpdb;
 	$user            = wp_get_current_user();
-	$logged_in       = $user && $user->ID;
-	$vendor_key_meta = $logged_in ? get_user_meta( $user->ID, 'asrg_vendor_key', true ) : '';
+	$logged_in       = (bool)( $user && $user->ID );
+	$vendor_key_meta = $logged_in ? asrg_csms_get_vendor_key($user->ID) : '';
 	$is_vendor       = $logged_in
-		&& in_array( 'company', (array) $user->roles )
-		&& ! empty( $vendor_key_meta );
+		&& in_array('company', (array)$user->roles)
+		&& ! empty($vendor_key_meta);
 
-	$auth_data = [
-		'loggedIn'    => (bool) $logged_in,
+	$auth = [
+		'loggedIn'    => $logged_in,
 		'userId'      => $logged_in ? $user->ID : null,
 		'displayName' => $logged_in ? $user->display_name : null,
 		'vendorKey'   => $is_vendor ? $vendor_key_meta : null,
@@ -368,109 +493,188 @@ function asrg_csms_evaluation_shortcode( $atts ) {
 		'loginUrl'    => 'https://garage.asrg.io',
 	];
 
-	$rest_data = [
-		'base'  => rest_url( 'asrg-csms/v1' ),
-		'nonce' => $logged_in ? wp_create_nonce( 'wp_rest' ) : null,
+	$rest = [
+		'base'  => rest_url('asrg-csms/v1'),
+		'nonce' => $logged_in ? wp_create_nonce('wp_rest') : null,
 	];
 
-	// Vote summary (public, all vendors)
-	$votes_table = asrg_csms_votes_table();
-	$vote_rows   = $wpdb->get_results(
+	// Vote summary
+	$vote_rows = $wpdb->get_results(
 		"SELECT feature_id, vendor_key, vote, COUNT(*) AS cnt
-		 FROM $votes_table
+		 FROM " . asrg_csms_votes_table() . "
 		 GROUP BY feature_id, vendor_key, vote",
 		ARRAY_A
 	);
 	$vote_summary = [];
-	foreach ( $vote_rows as $row ) {
-		$key = $row['vendor_key'] . ':' . $row['feature_id'];
-		if ( ! isset( $vote_summary[ $key ] ) ) $vote_summary[ $key ] = [ 'up' => 0, 'down' => 0 ];
-		$vote_summary[ $key ][ $row['vote'] ] = (int) $row['cnt'];
+	foreach ($vote_rows as $r) {
+		$k = $r['vendor_key'].':'.$r['feature_id'];
+		if (!isset($vote_summary[$k])) $vote_summary[$k] = ['up'=>0,'down'=>0];
+		$vote_summary[$k][$r['vote']] = (int)$r['cnt'];
 	}
 
-	// Current user's own votes
+	// My votes
 	$my_votes = [];
-	if ( $logged_in ) {
-		$my_rows = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT id, feature_id, vendor_key, vote, note FROM $votes_table WHERE user_id = %d",
-				$user->ID
-			),
+	if ($logged_in) {
+		$rows = $wpdb->get_results(
+			$wpdb->prepare("SELECT id,feature_id,vendor_key,vote,note FROM " . asrg_csms_votes_table() . " WHERE user_id=%d", $user->ID),
 			ARRAY_A
 		);
-		foreach ( $my_rows as $row ) {
-			$key = $row['vendor_key'] . ':' . $row['feature_id'];
-			$my_votes[ $key ] = [ 'id' => (int) $row['id'], 'vote' => $row['vote'], 'note' => $row['note'] ];
+		foreach ($rows as $r) {
+			$my_votes[$r['vendor_key'].':'.$r['feature_id']] = ['id'=>(int)$r['id'],'vote'=>$r['vote'],'note'=>$r['note']];
 		}
 	}
 
-	// Approved vendor claims (visible to all)
-	$claims_table = asrg_csms_claims_table();
-	$claim_rows   = $wpdb->get_results(
-		"SELECT vendor_key, feature_id, score, note FROM $claims_table WHERE status='approved'",
+	// Approved claims
+	$claim_rows = $wpdb->get_results(
+		"SELECT vendor_key,feature_id,score,note FROM " . asrg_csms_claims_table() . " WHERE status='approved'",
 		ARRAY_A
 	);
 	$vendor_claims = [];
-	foreach ( $claim_rows as $row ) {
-		if ( ! isset( $vendor_claims[ $row['vendor_key'] ] ) ) $vendor_claims[ $row['vendor_key'] ] = [];
-		$vendor_claims[ $row['vendor_key'] ][ $row['feature_id'] ] = [ 'score' => $row['score'], 'note' => $row['note'] ];
+	foreach ($claim_rows as $r) {
+		if (!isset($vendor_claims[$r['vendor_key']])) $vendor_claims[$r['vendor_key']] = [];
+		$vendor_claims[$r['vendor_key']][$r['feature_id']] = ['score'=>$r['score'],'note'=>$r['note']];
 	}
 
-	// Vendor's own claims including pending/rejected (only for vendor users)
+	// My claims (vendor only)
 	$my_claims = [];
-	if ( $is_vendor ) {
-		$my_claim_rows = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT id, feature_id, score, note, status FROM $claims_table WHERE vendor_key = %s",
-				$vendor_key_meta
-			),
+	if ($is_vendor) {
+		$rows = $wpdb->get_results(
+			$wpdb->prepare("SELECT id,feature_id,score,note,status FROM " . asrg_csms_claims_table() . " WHERE vendor_key=%s", $vendor_key_meta),
 			ARRAY_A
 		);
-		foreach ( $my_claim_rows as $row ) {
-			$my_claims[ $row['feature_id'] ] = [
-				'id'     => (int) $row['id'],
-				'score'  => $row['score'],
-				'note'   => $row['note'],
-				'status' => $row['status'],
+		foreach ($rows as $r) {
+			$my_claims[$r['feature_id']] = ['id'=>(int)$r['id'],'score'=>$r['score'],'note'=>$r['note'],'status'=>$r['status']];
+		}
+	}
+
+	// Approved vendor profiles
+	$profile_rows = $wpdb->get_results(
+		"SELECT vendor_key,profile_json FROM " . asrg_csms_profiles_table() . " WHERE status='approved'",
+		ARRAY_A
+	);
+	$vendor_profiles = [];
+	foreach ($profile_rows as $r) {
+		$d = json_decode($r['profile_json'], true);
+		if (is_array($d)) $vendor_profiles[$r['vendor_key']] = $d;
+	}
+
+	// My profile (vendor only)
+	$my_profile = null;
+	if ($is_vendor) {
+		$row = $wpdb->get_row( $wpdb->prepare(
+			"SELECT profile_json,status,reviewer_note,submitted_at FROM " . asrg_csms_profiles_table() . " WHERE vendor_key=%s",
+			$vendor_key_meta
+		), ARRAY_A);
+		if ($row) {
+			$my_profile = [
+				'profile'       => json_decode($row['profile_json'], true),
+				'status'        => $row['status'],
+				'reviewer_note' => $row['reviewer_note'],
+				'submitted_at'  => $row['submitted_at'],
 			];
 		}
 	}
 
-	$community_js = '<script>'
-		. 'window.ASRG_AUTH='          . wp_json_encode( $auth_data )    . ';'
-		. 'window.ASRG_REST='          . wp_json_encode( $rest_data )    . ';'
-		. 'window.ASRG_VOTE_SUMMARY='  . wp_json_encode( $vote_summary ) . ';'
-		. 'window.ASRG_MY_VOTES='      . wp_json_encode( $my_votes )     . ';'
-		. 'window.ASRG_VENDOR_CLAIMS=' . wp_json_encode( $vendor_claims ). ';'
-		. 'window.ASRG_MY_CLAIMS='     . wp_json_encode( $my_claims )    . ';'
-		. '</script>' . "\n";
-
-	return $fonts . $styles . $logos_js . $community_js . $body;
+	return compact('auth','rest','vote_summary','my_votes','vendor_claims','my_claims','vendor_profiles','my_profile');
 }
-add_shortcode( 'asrg_csms_evaluation', 'asrg_csms_evaluation_shortcode' );
 
-/**
- * Tell WordPress not to apply wpautop (auto-paragraph) to our shortcode output,
- * which would corrupt the HTML table structure.
- */
-function asrg_csms_remove_wpautop( $content ) {
-	if ( has_shortcode( $content, 'asrg_csms_evaluation' ) ) {
-		remove_filter( 'the_content', 'wpautop' );
-		remove_filter( 'the_content', 'wptexturize' );
+// ── SHORTCODE: EVALUATION TABLE ──────────────────────────────────────────────
+function asrg_csms_evaluation_shortcode( $atts ) {
+	$atts     = shortcode_atts([], $atts, 'asrg_csms_evaluation');
+	$html_file = plugin_dir_path(__FILE__) . 'asrg-csms-evaluation.html';
+
+	if (!file_exists($html_file))
+		return '<p style="color:red;">ASRG CSMS Evaluation: <code>asrg-csms-evaluation.html</code> not found.</p>';
+
+	$raw = file_get_contents($html_file);
+	$body   = preg_match('/<body[^>]*>(.*)<\/body>/is', $raw, $m) ? $m[1] : $raw;
+	$styles = '';
+	if (preg_match_all('/<style[^>]*>(.*?)<\/style>/is', $raw, $sm))
+		foreach ($sm[1] as $css) $styles .= '<style>'.$css.'</style>'."\n";
+	$fonts = '';
+	if (preg_match_all('/<link[^>]+fonts\.googleapis\.com[^>]+>/i', $raw, $fm))
+		$fonts = implode("\n", $fm[0])."\n";
+
+	// Logos
+	$logos_js   = '<script>window.ASRG_LOGOS={};</script>'."\n";
+	$logos_file = plugin_dir_path(__FILE__).'logos.json';
+	if (file_exists($logos_file)) {
+		$ld = json_decode(file_get_contents($logos_file), true);
+		if (is_array($ld)) {
+			unset($ld['_comment']);
+			$ld = array_filter($ld, fn($v)=>!is_null($v));
+			$logos_js = '<script>window.ASRG_LOGOS='.wp_json_encode($ld).';</script>'."\n";
+		}
+	}
+
+	$d = asrg_csms_load_community_data();
+
+	$js = '<script>'
+		.'window.ASRG_AUTH='          .wp_json_encode($d['auth'])          .';'
+		.'window.ASRG_REST='          .wp_json_encode($d['rest'])          .';'
+		.'window.ASRG_VOTE_SUMMARY='  .wp_json_encode($d['vote_summary'])  .';'
+		.'window.ASRG_MY_VOTES='      .wp_json_encode($d['my_votes'])      .';'
+		.'window.ASRG_VENDOR_CLAIMS=' .wp_json_encode($d['vendor_claims']) .';'
+		.'window.ASRG_MY_CLAIMS='     .wp_json_encode($d['my_claims'])     .';'
+		.'window.ASRG_VENDOR_PROFILES='.wp_json_encode($d['vendor_profiles']).';'
+		.'</script>'."\n";
+
+	return $fonts.$styles.$logos_js.$js.$body;
+}
+add_shortcode('asrg_csms_evaluation', 'asrg_csms_evaluation_shortcode');
+
+// ── SHORTCODE: VENDOR PORTAL ─────────────────────────────────────────────────
+function asrg_vendor_portal_shortcode( $atts ) {
+	$atts     = shortcode_atts([], $atts, 'asrg_vendor_portal');
+	$html_file = plugin_dir_path(__FILE__).'asrg-vendor-portal.html';
+
+	if (!file_exists($html_file))
+		return '<p style="color:red;">ASRG Vendor Portal: <code>asrg-vendor-portal.html</code> not found.</p>';
+
+	$raw  = file_get_contents($html_file);
+	$body = preg_match('/<body[^>]*>(.*)<\/body>/is', $raw, $m) ? $m[1] : $raw;
+
+	$styles = '';
+	if (preg_match_all('/<style[^>]*>(.*?)<\/style>/is', $raw, $sm))
+		foreach ($sm[1] as $css) $styles .= '<style>'.$css.'</style>'."\n";
+
+	$fonts = '';
+	if (preg_match_all('/<link[^>]+fonts\.googleapis\.com[^>]+>/i', $raw, $fm))
+		$fonts = implode("\n", $fm[0])."\n";
+
+	$d = asrg_csms_load_community_data();
+
+	$js = '<script>'
+		.'window.ASRG_AUTH='          .wp_json_encode($d['auth'])          .';'
+		.'window.ASRG_REST='          .wp_json_encode($d['rest'])          .';'
+		.'window.ASRG_VENDOR_CLAIMS=' .wp_json_encode($d['vendor_claims']) .';'
+		.'window.ASRG_MY_CLAIMS='     .wp_json_encode($d['my_claims'])     .';'
+		.'window.ASRG_VENDOR_PROFILES='.wp_json_encode($d['vendor_profiles']).';'
+		.'window.ASRG_MY_PROFILE='    .wp_json_encode($d['my_profile'])    .';'
+		.'</script>'."\n";
+
+	return $fonts.$styles.$js.$body;
+}
+add_shortcode('asrg_vendor_portal', 'asrg_vendor_portal_shortcode');
+
+// ── CONTENT FILTER: prevent wpautop corruption ────────────────────────────────
+function asrg_csms_remove_wpautop($content) {
+	if ( has_shortcode($content,'asrg_csms_evaluation') || has_shortcode($content,'asrg_vendor_portal') ) {
+		remove_filter('the_content','wpautop');
+		remove_filter('the_content','wptexturize');
 	}
 	return $content;
 }
-add_filter( 'the_content', 'asrg_csms_remove_wpautop', 1 );
+add_filter('the_content','asrg_csms_remove_wpautop', 1);
 
-/**
- * Add a "Full Width" body class when the shortcode page is loaded,
- * so themes can optionally suppress sidebars via CSS.
- */
-function asrg_csms_body_class( $classes ) {
+function asrg_csms_body_class($classes) {
 	global $post;
-	if ( isset( $post ) && has_shortcode( $post->post_content, 'asrg_csms_evaluation' ) ) {
+	if (isset($post) && (
+		has_shortcode($post->post_content,'asrg_csms_evaluation') ||
+		has_shortcode($post->post_content,'asrg_vendor_portal')
+	)) {
 		$classes[] = 'asrg-csms-full-width';
 	}
 	return $classes;
 }
-add_filter( 'body_class', 'asrg_csms_body_class' );
+add_filter('body_class','asrg_csms_body_class');

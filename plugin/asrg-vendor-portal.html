@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vendor Portal — ASRG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --white:#ffffff; --bg:#f7f8fa; --bg2:#eef0f4; --border:#e2e6ea; --border2:#d0d5dd;
+  --text:#1a1e26; --text2:#4b5563; --text3:#9ca3af; --black:#0d0f14;
+  --accent:#e8272a; --accent-soft:#fef2f2;
+  --green:#16a34a; --green-bg:#f0fdf4; --green-bd:#bbf7d0;
+  --yellow:#b45309; --yellow-bg:#fffbeb; --yellow-bd:#fde68a;
+  --red:#dc2626; --red-bg:#fef2f2; --red-bd:#fecaca;
+  --grey-bg:#f9fafb; --grey-bd:#e5e7eb;
+  --blue:#1d4ed8; --blue-bg:#eff6ff; --blue-bd:#bfdbfe;
+  --sans:'DM Sans',sans-serif; --mono:'DM Mono',monospace;
+  --sh1:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
+  --sh2:0 4px 16px rgba(0,0,0,.10),0 2px 4px rgba(0,0,0,.06);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased}
+
+/* ── GATE SCREENS ── */
+.gate{min-height:60vh;display:flex;align-items:center;justify-content:center;padding:40px 20px}
+.gate-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:48px 40px;max-width:440px;width:100%;text-align:center;box-shadow:var(--sh2)}
+.gate-icon{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 20px}
+.gate-icon.lock{background:var(--bg2);color:var(--text2)}
+.gate-icon.warn{background:var(--yellow-bg);color:var(--yellow)}
+.gate-title{font-size:20px;font-weight:600;color:var(--black);letter-spacing:-.02em;margin-bottom:8px}
+.gate-sub{font-size:13px;color:var(--text2);line-height:1.65;margin-bottom:24px}
+.gate-btn{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;padding:11px 22px;background:var(--black);color:var(--white);border:none;border-radius:6px;cursor:pointer;text-decoration:none;transition:background .15s}
+.gate-btn:hover{background:#2d3340}
+.gate-btn.outline{background:transparent;color:var(--text);border:1.5px solid var(--border2)}
+.gate-btn.outline:hover{background:var(--bg2)}
+
+/* ── PORTAL HEADER ── */
+.portal-header{background:var(--white);border-bottom:2px solid var(--black);padding:16px 28px;display:flex;align-items:center;gap:16px}
+.ph-logo{font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);border:1px solid var(--border);border-radius:4px;padding:4px 10px;background:var(--bg)}
+.ph-sep{color:var(--border2);font-size:16px}
+.ph-title{font-size:16px;font-weight:600;color:var(--black);letter-spacing:-.02em}
+.ph-vendor{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;padding:4px 12px;background:var(--accent-soft);color:var(--accent);border:1px solid #fca5a5;border-radius:4px;margin-left:4px}
+.ph-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.ph-user{font-size:12px;color:var(--text2)}
+.ph-user strong{color:var(--text);font-weight:600}
+
+/* ── TABS ── */
+.tab-bar{background:var(--white);border-bottom:1px solid var(--border);padding:0 28px;display:flex;gap:0}
+.tabbtn{font-family:var(--sans);font-size:13px;font-weight:500;color:var(--text2);padding:14px 20px;border:none;border-bottom:2px solid transparent;background:none;cursor:pointer;transition:color .15s,border-color .15s;margin-bottom:-1px;white-space:nowrap}
+.tabbt:first-child{padding-left:0}
+.tabbn:hover{color:var(--text)}
+.tabbt.active,.tabbn.active{color:var(--black);border-bottom-color:var(--accent);font-weight:600}
+
+/* ── CONTENT AREA ── */
+.portal-body{padding:28px;max-width:820px}
+
+/* ── STATUS BANNERS ── */
+.status-banner{border-radius:8px;padding:14px 18px;margin-bottom:22px;display:flex;align-items:flex-start;gap:12px;font-size:13px}
+.status-banner.pending{background:var(--yellow-bg);border:1px solid var(--yellow-bd);color:var(--yellow)}
+.status-banner.approved{background:var(--green-bg);border:1px solid var(--green-bd);color:var(--green)}
+.status-banner.rejected{background:var(--red-bg);border:1px solid var(--red-bd);color:var(--red)}
+.sb-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.sb-body{}
+.sb-title{font-weight:600;margin-bottom:2px}
+.sb-note{font-size:12px;opacity:.85}
+
+/* ── SECTION CARD ── */
+.sec-card{background:var(--white);border:1px solid var(--border);border-radius:10px;margin-bottom:18px;overflow:hidden;box-shadow:var(--sh1)}
+.sec-head{padding:14px 18px;background:var(--grey-bg);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.sec-head:hover{background:var(--bg2)}
+.sec-num{font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:3px;background:var(--bg2);color:var(--text3);border:1px solid var(--border)}
+.sec-label{font-size:13px;font-weight:600;color:var(--black);letter-spacing:-.01em}
+.sec-desc{font-size:11px;color:var(--text3);margin-left:4px}
+.sec-progress{margin-left:auto;display:flex;align-items:center;gap:6px}
+.sec-pct{font-family:var(--mono);font-size:10px;font-weight:500;color:var(--text3)}
+.sec-chevron{color:var(--text3);font-size:12px;margin-left:6px;transition:transform .2s}
+.sec-chevron.open{transform:rotate(90deg)}
+.sec-body{padding:0}
+.sec-body.collapsed{display:none}
+
+/* ── FEATURE ROW ── */
+.feat-row{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:14px}
+.feat-row:last-of-type{border-bottom:none}
+.feat-info{min-width:0;flex:1}
+.feat-name{font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px}
+.feat-desc{font-size:11px;color:var(--text3)}
+.feat-controls{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:8px;min-width:220px}
+.feat-scores{display:flex;gap:4px;align-items:center}
+.fsc{width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;font-family:var(--mono);cursor:pointer;border:1.5px solid transparent;transition:all .12s}
+.fsc.F{background:var(--green-bg);color:var(--green);border-color:var(--green-bd)}
+.fsc.P{background:var(--yellow-bg);color:var(--yellow);border-color:var(--yellow-bd)}
+.fsc.N{background:var(--red-bg);color:var(--red);border-color:var(--red-bd)}
+.fsc.U{background:var(--grey-bg);color:var(--text3);border-color:var(--grey-bd)}
+.fsc:not(.sel){opacity:.35}
+.fsc:hover:not(.sel){opacity:.7}
+.fsc.sel{opacity:1;box-shadow:0 0 0 2px currentColor}
+.feat-note{width:100%}
+.feat-note textarea{width:100%;font-family:var(--sans);font-size:11px;color:var(--text);background:var(--grey-bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;resize:vertical;min-height:42px;line-height:1.5;transition:border-color .15s}
+.feat-note textarea:focus{outline:none;border-color:var(--accent);background:var(--white)}
+.feat-note textarea::placeholder{color:var(--text3)}
+.feat-status{display:flex;align-items:center;gap:5px}
+.fs-badge{font-family:var(--mono);font-size:8px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:3px}
+.fs-badge.pending{background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-bd)}
+.fs-badge.approved{background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)}
+.fs-badge.rejected{background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)}
+.fs-badge.unsaved{background:var(--grey-bg);color:var(--text3);border:1px solid var(--grey-bd)}
+
+/* ── SECTION SAVE BAR ── */
+.sec-save-bar{padding:12px 18px;border-top:1px solid var(--border);background:var(--grey-bg);display:flex;align-items:center;justify-content:flex-end;gap:10px}
+.sec-msg{font-size:11px;color:var(--text3);font-family:var(--mono)}
+.sec-msg.ok{color:var(--green)}
+.sec-msg.err{color:var(--red)}
+.sec-msg.saving{color:var(--yellow)}
+
+/* ── PROFILE FORM ── */
+.profile-form{background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--sh1)}
+.pf-head{padding:16px 20px;background:var(--grey-bg);border-bottom:1px solid var(--border)}
+.pf-title{font-size:14px;font-weight:600;color:var(--black);letter-spacing:-.01em;margin-bottom:2px}
+.pf-sub{font-size:11px;color:var(--text3)}
+.pf-grid{padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pf-full{grid-column:1/-1}
+.field-group{display:flex;flex-direction:column;gap:4px}
+.field-label{font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.01em}
+.field-label span{color:var(--text3);font-weight:400;margin-left:4px}
+.field-input{font-family:var(--sans);font-size:13px;color:var(--text);background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:8px 12px;width:100%;transition:border-color .15s,background .15s}
+.field-input:focus{outline:none;border-color:var(--accent);background:var(--white)}
+.field-input::placeholder{color:var(--text3)}
+textarea.field-input{resize:vertical;min-height:72px;line-height:1.6}
+.field-hint{font-size:10px;color:var(--text3)}
+.pf-footer{padding:16px 20px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--grey-bg)}
+.pf-msg{font-size:11px;font-family:var(--mono);color:var(--text3)}
+.pf-msg.ok{color:var(--green)}
+.pf-msg.err{color:var(--red)}
+.pf-msg.saving{color:var(--yellow)}
+
+/* ── BUTTONS ── */
+.btn{font-family:var(--mono);font-size:10px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;padding:9px 18px;border-radius:6px;cursor:pointer;border:none;transition:all .15s;white-space:nowrap}
+.btn-primary{background:var(--black);color:var(--white)}
+.btn-primary:hover{background:#2d3340}
+.btn-primary:disabled{background:var(--text3);cursor:not-allowed}
+.btn-secondary{background:var(--white);color:var(--text);border:1.5px solid var(--border2)}
+.btn-secondary:hover{background:var(--bg2);border-color:var(--border2)}
+
+/* ── ASSESSMENT SUMMARY BAR ── */
+.assess-summary{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:20px;box-shadow:var(--sh1)}
+.as-item{text-align:center}
+.as-val{display:block;font-size:18px;font-weight:600;color:var(--black);letter-spacing:-.02em;line-height:1;font-family:var(--mono)}
+.as-lbl{display:block;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-top:3px}
+.as-sep{width:1px;height:30px;background:var(--border)}
+.as-note{font-size:11px;color:var(--text2);margin-left:4px}
+
+/* ── GROUP HEADER ── */
+.group-header{display:flex;align-items:center;gap:8px;margin:24px 0 12px}
+.group-badge{font-family:var(--mono);font-size:9px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:4px}
+.group-badge.csms{background:var(--blue-bg);color:var(--blue);border:1px solid var(--blue-bd)}
+.group-badge.it{background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe}
+.group-title{font-size:15px;font-weight:600;color:var(--black);letter-spacing:-.01em}
+.group-desc{font-size:11px;color:var(--text3)}
+</style>
+</head>
+<body>
+
+<!-- ── AUTH GATE: NOT LOGGED IN ── -->
+<div id="gateLogin" class="gate" style="display:none">
+  <div class="gate-card">
+    <div class="gate-icon lock">🔒</div>
+    <div class="gate-title">Sign in to continue</div>
+    <div class="gate-sub">The ASRG Vendor Portal is only available to authenticated vendor representatives. Please sign in with your ASRG Garage account.</div>
+    <a id="gateLoginBtn" href="#" class="gate-btn">Sign in →</a>
+  </div>
+</div>
+
+<!-- ── AUTH GATE: NOT A VENDOR ── -->
+<div id="gateRole" class="gate" style="display:none">
+  <div class="gate-card">
+    <div class="gate-icon warn">⚠</div>
+    <div class="gate-title">Vendor access required</div>
+    <div class="gate-sub">Your account (<span id="gateRoleUser"></span>) doesn't have a vendor company assigned. Please contact the ASRG team to link your account to a vendor profile.</div>
+    <a href="mailto:info@asrg.io" class="gate-btn outline">Contact ASRG →</a>
+  </div>
+</div>
+
+<!-- ── MAIN PORTAL ── -->
+<div id="portalMain" style="display:none">
+
+  <!-- Header -->
+  <div class="portal-header">
+    <span class="ph-logo">ASRG</span>
+    <span class="ph-sep">›</span>
+    <span class="ph-title">Vendor Portal</span>
+    <span class="ph-vendor" id="phVendor">Loading…</span>
+    <div class="ph-right">
+      <span class="ph-user">Signed in as <strong id="phUser"></strong></span>
+    </div>
+  </div>
+
+  <!-- Tab bar -->
+  <div class="tab-bar">
+    <button class="tabbt active" id="tabBtnProfile" onclick="switchTab('profile')">Company Profile</button>
+    <button class="tabbt" id="tabBtnAssess" onclick="switchTab('assess')">Criteria Self-Assessment</button>
+  </div>
+
+  <!-- ─────────────────────── PROFILE TAB ─────────────────────── -->
+  <div id="tabProfile" class="portal-body">
+
+    <!-- Status banner (filled by JS) -->
+    <div id="profileStatusBanner" style="display:none"></div>
+
+    <div class="profile-form">
+      <div class="pf-head">
+        <div class="pf-title">Company Profile</div>
+        <div class="pf-sub">Update your company and product information. Changes are submitted for ASRG review before appearing on the evaluation page.</div>
+      </div>
+      <div class="pf-grid">
+        <div class="field-group pf-full">
+          <label class="field-label" for="pf_desc">Company Description <span>overview of your company and product focus</span></label>
+          <textarea class="field-input" id="pf_desc" name="desc" rows="3" placeholder="e.g. We provide an end-to-end automotive CSMS platform covering risk management, vulnerability tracking, and SBOM lifecycle for Tier 1 and OEM customers..."></textarea>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="pf_product">Product Name</label>
+          <input class="field-input" id="pf_product" name="product" type="text" placeholder="e.g. CyberSense Platform">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="pf_productUrl">Product URL <span>https://</span></label>
+          <input class="field-input" id="pf_productUrl" name="productUrl" type="url" placeholder="https://yourproduct.com">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="pf_website">Company Website <span>https://</span></label>
+          <input class="field-input" id="pf_website" name="website" type="url" placeholder="https://yourcompany.com">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="pf_hq">Headquarters</label>
+          <input class="field-input" id="pf_hq" name="hq" type="text" placeholder="e.g. Tel Aviv, Israel">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="pf_founded">Founded</label>
+          <input class="field-input" id="pf_founded" name="founded" type="text" placeholder="e.g. 2017">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="pf_funding">Funding Status</label>
+          <input class="field-input" id="pf_funding" name="funding" type="text" placeholder="e.g. Series B — $32M">
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="pf_employees">Employees (est.)</label>
+          <input class="field-input" id="pf_employees" name="employees" type="text" placeholder="e.g. 51–200">
+        </div>
+        <div class="field-group pf-full">
+          <label class="field-label" for="pf_investors">Key Investors / Owners</label>
+          <input class="field-input" id="pf_investors" name="investors" type="text" placeholder="e.g. Intel Capital, Kardan Technologies">
+        </div>
+        <div class="field-group pf-full">
+          <label class="field-label" for="pf_crunchbase">Crunchbase Profile URL <span>optional</span></label>
+          <input class="field-input" id="pf_crunchbase" name="crunchbase" type="url" placeholder="https://www.crunchbase.com/organization/your-company">
+        </div>
+      </div>
+      <div class="pf-footer">
+        <span class="pf-msg" id="pfMsg"></span>
+        <button class="btn btn-primary" onclick="saveProfile()" id="pfSaveBtn">Submit for Review</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────────────── ASSESSMENT TAB ─────────────────────── -->
+  <div id="tabAssess" class="portal-body" style="display:none">
+
+    <!-- Summary bar -->
+    <div class="assess-summary" id="assessSummary">
+      <div class="as-item"><span class="as-val" id="aSumTotal">0</span><span class="as-lbl">Total</span></div>
+      <div class="as-sep"></div>
+      <div class="as-item"><span class="as-val" id="aSumSaved" style="color:var(--text2)">0</span><span class="as-lbl">Saved</span></div>
+      <div class="as-sep"></div>
+      <div class="as-item"><span class="as-val" id="aSumApproved" style="color:var(--green)">0</span><span class="as-lbl">Approved</span></div>
+      <div class="as-sep"></div>
+      <div class="as-item"><span class="as-val" id="aSumPending" style="color:var(--yellow)">0</span><span class="as-lbl">Pending</span></div>
+      <span class="as-note">Scores are submitted for ASRG review. Approved scores will appear on the public evaluation.</span>
+    </div>
+
+    <!-- Sections injected by JS -->
+    <div id="assessSections"></div>
+
+  </div>
+
+</div>
+
+<script>
+// ─── DATA (injected by PHP shortcode) ───────────────────────────────────────
+const AUTH     = window.ASRG_AUTH     || {loggedIn:false,isVendor:false,loginUrl:'https://garage.asrg.io'};
+const REST     = window.ASRG_REST     || {base:'',nonce:null};
+const MY_PROF  = window.ASRG_MY_PROFILE  || null;  // {profile:{...}, status, reviewer_note, submitted_at}
+const MY_CLAIMS= window.ASRG_MY_CLAIMS   || {};    // {feature_id: {id,score,note,status}}
+// (ASRG_VENDOR_PROFILES available globally if needed)
+
+// ─── VENDOR NAMES ────────────────────────────────────────────────────────────
+const VENDOR_NAMES = {
+  c2a:'C2A EvSec', cybellum:'Cybellum', manifest:'Manifest Cyber',
+  vxlabs:'VxLabs', itemis:'Itemis', vicone:'VicOne',
+  vultara:'Vultara', autocrypt:'AutoCrypt'
+};
+
+// ─── SECTIONS DATA (score-type features only; no vendor data) ───────────────
+const PORTAL_GROUPS = [
+  {
+    id:'csms', label:'CSMS Domains', badge:'csms',
+    desc:'Core cybersecurity management system domains per ISO/SAE 21434 and UNECE WP.29/R155',
+    sections:[
+      {id:'risk', num:'C1', label:'Risk Management', desc:'Full lifecycle TARA per ISO/SAE 21434',
+       features:[
+         {name:'Full lifecycle risk coverage',desc:'Development through operations'},
+         {name:'Automated TARA',desc:'AI/template-assisted threat analysis and risk assessment'},
+         {name:'Threat-to-asset mapping',desc:'Bidirectional threat and asset linkage'},
+         {name:'Risk treatment tracking',desc:'Accept / reduce / avoid / transfer workflows'},
+       ]},
+      {id:'vuln', num:'C2', label:'Vulnerability Management', desc:'CVE tracking, prioritization, and remediation',
+       features:[
+         {name:'Vulnerability discovery',desc:'Automated detection across assets'},
+         {name:'Vulnerability prioritization',desc:'Context-aware severity scoring'},
+         {name:'CVE / NVD feed integration',desc:'Standard vulnerability database feeds'},
+         {name:'Remediation tracking',desc:'Fix status workflow with verification'},
+       ]},
+      {id:'asset', num:'C3', label:'Asset Management', desc:'SBOM, HBOM, CBOM and asset lifecycle',
+       features:[
+         {name:'Hierarchical asset structuring',desc:'Vehicle → System → Component hierarchy'},
+         {name:'SBOM management',desc:'Software Bill of Materials lifecycle'},
+         {name:'HBOM / CBOM support',desc:'Hardware and cryptography BOM management'},
+         {name:'Asset lifecycle tracking',desc:'EOL, version history, decommission'},
+       ]},
+      {id:'incident', num:'C4', label:'Incident Management', desc:'Detection, response playbooks, and IR integrations',
+       features:[
+         {name:'Incident detection & alerting',desc:'Automated detection with notifications'},
+         {name:'Playbooks & escalation',desc:'Predefined response playbooks with workflows'},
+         {name:'External IR platform integration',desc:'SIEM, SOAR, ServiceNow connectors'},
+       ]},
+    ]
+  },
+  {
+    id:'it', label:'Information Technology', badge:'it',
+    desc:'Technology stack, APIs, integrations, UX, onboarding, scalability, and reporting',
+    sections:[
+      {id:'tech', num:'T1', label:'Technology Stack & APIs', desc:'Architecture, deployment, multi-tenancy, API quality',
+       features:[
+         {name:'Deployment model',desc:'Cloud, on-prem, hybrid options'},
+         {name:'Multi-tenancy & RBAC',desc:'Org-level isolation, role-based access'},
+         {name:'Public API availability',desc:'Documented endpoints with versioning'},
+         {name:'Webhook & event streaming',desc:'Push-based notifications on data changes'},
+         {name:'Jira / issue tracking',desc:'Bidirectional ticket sync'},
+       ]},
+      {id:'integrations', num:'T2', label:'Integrations', desc:'Ecosystem connections: dev tools, threat intel, SBOM exchange',
+       features:[
+         {name:'Jira / issue tracking',desc:'Bidirectional ticket sync'},
+         {name:'CI/CD pipelines',desc:'Jenkins, GitHub Actions, GitLab CI'},
+         {name:'Threat intelligence platforms',desc:'MISP, ISAC feeds, proprietary intel'},
+         {name:'SBOM exchange & VEX',desc:'Supplier portal, VEX document sharing'},
+       ]},
+      {id:'ux', num:'T3', label:'User Interface & Experience', desc:'Dashboard design, role-based views, visualization',
+       features:[
+         {name:'Dashboard clarity',desc:'Information hierarchy and visual layout'},
+         {name:'Role-based views',desc:'Analyst vs CISO vs compliance officer views'},
+         {name:'Risk & threat visualization',desc:'Heatmaps, graphs, attack path diagrams'},
+         {name:'Time to first value',desc:'Speed to complete first meaningful workflow'},
+       ]},
+      {id:'onboard', num:'T4', label:'Onboarding & Learning Curve', desc:'Time-to-value, documentation, trial environments',
+       features:[
+         {name:'Time to first value',desc:'Speed to complete first meaningful workflow'},
+         {name:'Documentation quality',desc:'Depth, accuracy, and searchability of docs'},
+         {name:'Sandbox / trial environment',desc:'Ability to test without production data'},
+         {name:'Executive dashboards',desc:'CISO and C-suite level risk summaries'},
+       ]},
+      {id:'reporting', num:'T5', label:'Reporting & Analytics', desc:'Compliance output, export formats, executive reporting',
+       features:[
+         {name:'Executive dashboards',desc:'CISO and C-suite level risk summaries'},
+         {name:'Compliance evidence packaging',desc:'ISO 21434, R155 audit-ready output'},
+         {name:'Export formats',desc:'PDF, CSV, JSON, SPDX/CycloneDX support'},
+       ]},
+    ]
+  }
+];
+
+// ─── FEATURE ID HELPER ───────────────────────────────────────────────────────
+function featId(secId, featName) {
+  return secId + '__' + featName.toLowerCase().replace(/[^a-z0-9]+/g,'_');
+}
+
+// ─── IN-MEMORY CLAIMS CACHE (mutable) ────────────────────────────────────────
+const claimsCache = Object.assign({}, MY_CLAIMS);
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', init);
+
+function init() {
+  if (!AUTH.loggedIn) {
+    const btn = document.getElementById('gateLoginBtn');
+    const base = AUTH.loginUrl || 'https://garage.asrg.io';
+    btn.href = base + '?redirect_to=' + encodeURIComponent(window.location.href);
+    show('gateLogin');
+    return;
+  }
+  if (!AUTH.isVendor) {
+    document.getElementById('gateRoleUser').textContent = AUTH.displayName || AUTH.userId || 'your account';
+    show('gateRole');
+    return;
+  }
+  // Vendor is authenticated
+  show('portalMain');
+  const vname = VENDOR_NAMES[AUTH.vendorKey] || AUTH.vendorKey || 'Unknown';
+  document.getElementById('phVendor').textContent = vname;
+  document.getElementById('phUser').textContent   = AUTH.displayName || 'Vendor';
+  loadProfileForm();
+  buildAssessment();
+  updateSummaryBar();
+}
+
+function show(id) {
+  ['gateLogin','gateRole','portalMain'].forEach(i => {
+    const el = document.getElementById(i);
+    if (el) el.style.display = (i === id) ? '' : 'none';
+  });
+}
+
+// ─── TAB SWITCHING ────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  const isProfile = tab === 'profile';
+  document.getElementById('tabProfile').style.display = isProfile ? '' : 'none';
+  document.getElementById('tabAssess').style.display  = isProfile ? 'none' : '';
+  document.getElementById('tabBtnProfile').classList.toggle('active', isProfile);
+  document.getElementById('tabBtnAssess').classList.toggle('active', !isProfile);
+}
+
+// ─── PROFILE FORM ─────────────────────────────────────────────────────────────
+function loadProfileForm() {
+  const banner = document.getElementById('profileStatusBanner');
+
+  if (MY_PROF) {
+    const s = MY_PROF.status;
+    const icons  = {pending:'⏳', approved:'✓', rejected:'✗'};
+    const titles = {pending:'Review in progress', approved:'Profile approved', rejected:'Profile not approved'};
+    const notes  = {
+      pending: 'Your profile is pending ASRG review. It will appear on the evaluation page once approved.',
+      approved:'Your profile is live on the evaluation page.',
+      rejected:'Your submission was not approved. Please review the note below and resubmit.'
+    };
+    let html = `<div class="status-banner ${s}">
+      <span class="sb-icon">${icons[s]||'·'}</span>
+      <div class="sb-body">
+        <div class="sb-title">${titles[s]||s}</div>
+        <div class="sb-note">${notes[s]||''}${MY_PROF.reviewer_note ? ' — <em>' + escHtml(MY_PROF.reviewer_note) + '</em>' : ''}</div>
+      </div>
+    </div>`;
+    banner.innerHTML = html;
+    banner.style.display = '';
+
+    // Pre-populate fields
+    const p = MY_PROF.profile || {};
+    ['desc','product','productUrl','website','hq','founded','funding','employees','investors','crunchbase']
+      .forEach(k => {
+        const el = document.getElementById('pf_' + k);
+        if (el && p[k]) el.value = p[k];
+      });
+  }
+}
+
+async function saveProfile() {
+  const btn = document.getElementById('pfSaveBtn');
+  const msg = document.getElementById('pfMsg');
+  const fields = ['desc','product','productUrl','website','hq','founded','funding','employees','investors','crunchbase'];
+  const profile = {};
+  fields.forEach(k => {
+    const el = document.getElementById('pf_' + k);
+    if (el && el.value.trim()) profile[k] = el.value.trim();
+  });
+
+  btn.disabled = true;
+  msg.className = 'pf-msg saving';
+  msg.textContent = 'Submitting…';
+
+  try {
+    const res = await apiFetch(REST.base + '/vendor-profile', {
+      method:'PUT',
+      headers:{'Content-Type':'application/json','X-WP-Nonce':REST.nonce},
+      body: JSON.stringify({profile})
+    });
+    if (res.ok) {
+      msg.className = 'pf-msg ok';
+      msg.textContent = '✓ Submitted for review';
+      // Update banner
+      const banner = document.getElementById('profileStatusBanner');
+      banner.innerHTML = `<div class="status-banner pending">
+        <span class="sb-icon">⏳</span>
+        <div class="sb-body">
+          <div class="sb-title">Review in progress</div>
+          <div class="sb-note">Your profile has been submitted and is pending ASRG review.</div>
+        </div>
+      </div>`;
+      banner.style.display = '';
+    } else {
+      const err = await res.json().catch(()=>({}));
+      msg.className = 'pf-msg err';
+      msg.textContent = '✗ ' + (err.message || 'Save failed');
+    }
+  } catch(e) {
+    msg.className = 'pf-msg err';
+    msg.textContent = '✗ Network error';
+  }
+  btn.disabled = false;
+}
+
+// ─── ASSESSMENT ───────────────────────────────────────────────────────────────
+function buildAssessment() {
+  const container = document.getElementById('assessSections');
+  let html = '';
+
+  PORTAL_GROUPS.forEach(g => {
+    html += `<div class="group-header">
+      <span class="group-badge ${g.id}">${g.id.toUpperCase()}</span>
+      <span class="group-title">${escHtml(g.label)}</span>
+      <span class="group-desc">— ${escHtml(g.desc)}</span>
+    </div>`;
+
+    g.sections.forEach(sec => {
+      const featCount = sec.features.length;
+      const savedCount = sec.features.filter(f => {
+        const fid = featId(sec.id, f.name);
+        return !!claimsCache[fid];
+      }).length;
+      const pctText = savedCount > 0 ? `${savedCount}/${featCount} saved` : `0/${featCount}`;
+
+      html += `<div class="sec-card" id="sec_${sec.id}">
+        <div class="sec-head" onclick="toggleSection('${sec.id}')">
+          <span class="sec-num">${escHtml(sec.num)}</span>
+          <span class="sec-label">${escHtml(sec.label)}</span>
+          <span class="sec-desc">${escHtml(sec.desc)}</span>
+          <span class="sec-progress">
+            <span class="sec-pct" id="secPct_${sec.id}">${pctText}</span>
+            <span class="sec-chevron open" id="secChev_${sec.id}">›</span>
+          </span>
+        </div>
+        <div class="sec-body" id="secBody_${sec.id}">`;
+
+      sec.features.forEach(f => {
+        const fid = featId(sec.id, f.name);
+        const existing = claimsCache[fid] || null;
+        const score = existing ? existing.score : null;
+        const note  = existing ? (existing.note || '') : '';
+        const status= existing ? existing.status : null;
+
+        const scores = ['F','P','N','U'];
+        const scBtns = scores.map(s =>
+          `<span class="fsc ${s}${score===s?' sel':''}"
+                data-fid="${escAttr(fid)}" data-score="${s}"
+                onclick="selectScore('${escAttr(fid)}','${s}')"
+                title="${{F:'Full',P:'Partial',N:'None',U:'Unknown'}[s]}">${s}</span>`
+        ).join('');
+
+        const badgeHtml = status
+          ? `<span class="fs-badge ${status}">${status}</span>`
+          : `<span class="fs-badge unsaved">Not saved</span>`;
+
+        html += `<div class="feat-row" id="feat_${escAttr(fid)}">
+          <div class="feat-info">
+            <div class="feat-name">${escHtml(f.name)}</div>
+            <div class="feat-desc">${escHtml(f.desc)}</div>
+          </div>
+          <div class="feat-controls">
+            <div class="feat-scores" style="align-items:center;gap:6px">
+              ${scBtns}
+              <div class="feat-status" id="fstat_${escAttr(fid)}">${badgeHtml}</div>
+            </div>
+            <div class="feat-note">
+              <textarea id="fnote_${escAttr(fid)}" placeholder="Add supporting notes (optional)…" rows="2">${escHtml(note)}</textarea>
+            </div>
+          </div>
+        </div>`;
+      });
+
+      html += `<div class="sec-save-bar">
+          <span class="sec-msg" id="secMsg_${sec.id}"></span>
+          <button class="btn btn-primary" onclick="saveSection('${sec.id}')">Save Section</button>
+        </div>
+        </div><!-- sec-body -->
+      </div><!-- sec-card -->`;
+    });
+  });
+
+  container.innerHTML = html;
+}
+
+function toggleSection(secId) {
+  const body = document.getElementById('secBody_' + secId);
+  const chev = document.getElementById('secChev_' + secId);
+  if (!body) return;
+  const collapsed = body.classList.toggle('collapsed');
+  chev.classList.toggle('open', !collapsed);
+}
+
+function selectScore(fid, score) {
+  // Toggle all buttons for this fid
+  document.querySelectorAll(`.fsc[data-fid="${CSS.escape(fid)}"]`).forEach(el => {
+    el.classList.toggle('sel', el.dataset.score === score);
+  });
+}
+
+async function saveSection(secId) {
+  const group = PORTAL_GROUPS.flatMap(g => g.sections).find(s => s.id === secId);
+  if (!group) return;
+
+  const msg = document.getElementById('secMsg_' + secId);
+  msg.className = 'sec-msg saving';
+  msg.textContent = 'Saving…';
+
+  const errors = [];
+  const saved  = [];
+
+  for (const f of group.features) {
+    const fid = featId(secId, f.name);
+    const scoreEl = document.querySelector(`.fsc.sel[data-fid="${CSS.escape(fid)}"]`);
+    if (!scoreEl) continue; // skip unscored features
+
+    const score = scoreEl.dataset.score;
+    const note  = (document.getElementById('fnote_' + fid) || {}).value || '';
+
+    try {
+      const res = await apiFetch(REST.base + '/claims', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-WP-Nonce':REST.nonce},
+        body: JSON.stringify({feature_id: fid, score, note: note||undefined})
+      });
+      const data = await res.json();
+      if (res.ok) {
+        claimsCache[fid] = {id:data.id, score, note, status:'pending'};
+        setFeatStatus(fid, 'pending');
+        saved.push(fid);
+      } else {
+        errors.push(f.name + ': ' + (data.message||'error'));
+      }
+    } catch(e) {
+      errors.push(f.name + ': network error');
+    }
+  }
+
+  // Update section progress counter
+  const allFeats = group.features.length;
+  const savedFeats = group.features.filter(f => !!claimsCache[featId(secId,f.name)]).length;
+  const pctEl = document.getElementById('secPct_' + secId);
+  if (pctEl) pctEl.textContent = `${savedFeats}/${allFeats} saved`;
+
+  // Update summary bar
+  updateSummaryBar();
+
+  if (errors.length) {
+    msg.className = 'sec-msg err';
+    msg.textContent = '✗ ' + errors[0];
+  } else if (saved.length === 0) {
+    msg.className = 'sec-msg';
+    msg.textContent = 'No scores selected to save.';
+  } else {
+    msg.className = 'sec-msg ok';
+    msg.textContent = `✓ ${saved.length} feature${saved.length!==1?'s':''} submitted for review`;
+  }
+
+  // Clear message after 5s
+  setTimeout(() => { if (msg.textContent) msg.textContent = ''; }, 5000);
+}
+
+function setFeatStatus(fid, status) {
+  const container = document.getElementById('fstat_' + fid);
+  if (!container) return;
+  container.innerHTML = `<span class="fs-badge ${status}">${status}</span>`;
+}
+
+function updateSummaryBar() {
+  const allFeats = PORTAL_GROUPS.flatMap(g => g.sections).flatMap(s => s.features);
+  const total    = allFeats.length;
+  let saved=0, approved=0, pending=0;
+
+  allFeats.forEach(f => {
+    const secId = PORTAL_GROUPS.flatMap(g => g.sections).find(s => s.features.includes(f))?.id;
+    // This approach doesn't work well — let me use a flat map approach
+  });
+
+  // Flatten all feature IDs
+  const allFids = [];
+  PORTAL_GROUPS.forEach(g => g.sections.forEach(s => s.features.forEach(f => {
+    allFids.push(featId(s.id, f.name));
+  })));
+
+  allFids.forEach(fid => {
+    const c = claimsCache[fid];
+    if (!c) return;
+    saved++;
+    if (c.status === 'approved') approved++;
+    else if (c.status === 'pending') pending++;
+  });
+
+  document.getElementById('aSumTotal').textContent    = allFids.length;
+  document.getElementById('aSumSaved').textContent    = saved;
+  document.getElementById('aSumApproved').textContent = approved;
+  document.getElementById('aSumPending').textContent  = pending;
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) {
+  return String(s||'').replace(/"/g,'&quot;');
+}
+async function apiFetch(url, opts) {
+  return fetch(url, Object.assign({credentials:'include'}, opts));
+}
+</script>
+</body>
+</html>
